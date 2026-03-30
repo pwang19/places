@@ -1,0 +1,351 @@
+/* Modern UI Styles */
+
+:root {
+  --color-teal: #177e89;
+  --color-dark-blue: #084c61;
+  --color-red: #db3a34;
+  --color-yellow: #ffc857;
+  --color-dark-gray: #323031;
+  
+  --primary-gradient: linear-gradient(135deg, #177e89 0%, #084c61 100%);
+  --secondary-gradient: linear-gradient(135deg, #084c61 0%, #177e89 100%);
+  --success-gradient: linear-gradient(135deg, #177e89 0%, #084c61 100%);
+  --warning-gradient: linear-gradient(135deg, #ffc857 0%, #ffb347 100%);
+  --danger-gradient: linear-gradient(135deg, #db3a34 0%, #c02e28 100%);
+  --dark-bg: #084c61;
+  --card-bg: #177e89;
+  --text-primary: #fffffa;
+  --text-secondary: #ffc857;
+  --border-color: #177e89;
+  --shadow-sm: 0 2px 8px rgba(8, 76, 97, 0.2);
+  --shadow-md: 0 4px 16px rgba(8, 76, 97, 0.3);
+  --shadow-lg: 0 8px 32px rgba(8, 76, 97, 0.4);
+  --shadow-xl: 0 16px 48px rgba(8, 76, 97, 0.5);
+}
+
+body {
+  background: linear-gradient(135deg, #084c61 0%, #177e89 50%, #084c61 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+  color: var(--text-primary);
+}
+
+.container {
+  padding: 2rem 1rem;
+}
+
+/* Modern Header */
+.modern-header {
+  background: var(--primary-gradient);
+  padding: 2rem;
+  border-radius: 20px;
+  box-shadow: var(--shadow-lg);
+  margin-bottom: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.modern-header::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+  animation: pulse 4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+.modern-header h1 {
+  font-weight: 700;
+  font-size: 3rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  margin: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.modern-header .btn {
+  position: relative;
+  z-index: 1;
+  border: none;
+  border-radius: 12px;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-md);
+  transition: all 0.3s ease;
+}
+
+.modern-header .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Modern Table */
+.modern-table-container {
+  background: var(--card-bg);
+  border-radius: 20px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-xl);
+  overflow: hidden;
+}
+
+.modern-table {
+  background: transparent;
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+}
+
+.modern-table thead th {
+  background: var(--primary-gradient);
+  color: white;
+  font-weight: 600;
+  padding: 1.25rem 1rem;
+  border: none;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.modern-table thead th:hover {
+  background: linear-gradient(135deg, #177e89 0%, #084c61 100%);
+  transform: translateY(-2px);
+}
+
+.modern-table tbody tr {
+  background: rgba(255, 255, 250, 0.05);
+  border-bottom: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.modern-table tbody tr:hover {
+  background: rgba(23, 126, 137, 0.2);
+  transform: scale(1.01);
+  box-shadow: var(--shadow-md);
+}
+
+.modern-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.modern-table tbody td {
+  padding: 1.25rem 1rem;
+  border: none;
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+/* Modern Buttons */
+.btn-modern {
+  border: none;
+  border-radius: 10px;
+  padding: 0.5rem 1.25rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-modern::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.btn-modern:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+.btn-modern:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-modern:active {
+  transform: translateY(0);
+}
+
+.btn-warning-modern {
+  background: var(--warning-gradient);
+  color: white;
+}
+
+.btn-danger-modern {
+  background: var(--danger-gradient);
+  color: white;
+}
+
+.btn-primary-modern {
+  background: var(--primary-gradient);
+  color: var(--text-primary);
+}
+
+.btn-secondary-modern {
+  background: var(--color-dark-gray);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary-modern:hover {
+  background: var(--color-teal);
+  border-color: var(--color-yellow);
+}
+
+/* Modern Modal */
+.modern-modal .modal-content {
+  background: var(--card-bg);
+  border: none;
+  border-radius: 20px;
+  box-shadow: var(--shadow-xl);
+  overflow: hidden;
+}
+
+.modern-modal .modal-header {
+  background: var(--primary-gradient);
+  border: none;
+  padding: 1.5rem;
+}
+
+.modern-modal .modal-title {
+  font-weight: 700;
+  font-size: 1.5rem;
+  color: white;
+}
+
+.modern-modal .modal-body {
+  padding: 2rem;
+  background: var(--card-bg);
+}
+
+.modern-modal .form-label {
+  color: var(--text-primary);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.modern-modal .form-control,
+.modern-modal .form-select {
+  background: rgba(255, 255, 250, 0.1);
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
+  color: var(--text-primary);
+  padding: 0.75rem 1rem;
+  transition: all 0.3s ease;
+}
+
+.modern-modal .form-control:focus,
+.modern-modal .form-select:focus {
+  background: rgba(255, 255, 250, 0.15);
+  border-color: #ffc857;
+  box-shadow: 0 0 0 0.2rem rgba(255, 200, 87, 0.25);
+  color: var(--text-primary);
+}
+
+.modern-modal .form-control::placeholder {
+  color: var(--text-secondary);
+}
+
+.modern-modal .modal-footer {
+  border: none;
+  padding: 1.5rem;
+  background: rgba(255, 255, 250, 0.05);
+}
+
+/* Price Range Display */
+.price-range {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #ffc857;
+  letter-spacing: 2px;
+}
+
+/* Rating Display */
+.rating-display {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Place Details Page */
+.place-details-header {
+  background: var(--primary-gradient);
+  padding: 3rem 2rem;
+  border-radius: 20px;
+  box-shadow: var(--shadow-xl);
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.place-details-header h1 {
+  font-weight: 700;
+  font-size: 3.5rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  margin-bottom: 1rem;
+}
+
+/* Reviews Section */
+.reviews-section {
+  background: var(--card-bg);
+  border-radius: 20px;
+  padding: 2rem;
+  box-shadow: var(--shadow-lg);
+  margin-bottom: 2rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .modern-header h1 {
+    font-size: 2rem;
+  }
+  
+  .modern-table-container {
+    padding: 1rem;
+    overflow-x: auto;
+  }
+  
+  .modern-table {
+    font-size: 0.9rem;
+  }
+  
+  .modern-table thead th,
+  .modern-table tbody td {
+    padding: 0.75rem 0.5rem;
+  }
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--dark-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary-gradient);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #177e89 0%, #084c61 100%);
+}
+
