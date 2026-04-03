@@ -17,6 +17,7 @@ const UpdatePlace = ({
   const [location, setLocation] = useState("");
   const [priceRange, setPriceRange] = useState("");
   const [notes, setNotes] = useState("");
+  const [reviewsDisabled, setReviewsDisabled] = useState(false);
   const [tagList, setTagList] = useState([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -47,6 +48,7 @@ const UpdatePlace = ({
               : ""
           );
           setNotes(place.notes ?? "");
+          setReviewsDisabled(Boolean(place.reviews_disabled));
           setTagList(normalizeTags(place.tags));
         } catch (err) {
           console.error("Error fetching place:", err);
@@ -63,6 +65,7 @@ const UpdatePlace = ({
       setLocation("");
       setPriceRange("");
       setNotes("");
+      setReviewsDisabled(false);
       setTagList([]);
       setShowDeleteConfirm(false);
     }
@@ -93,6 +96,7 @@ const UpdatePlace = ({
         location: location,
         price_range: priceRange === "" ? null : Number(priceRange),
         notes: notes.trim() || null,
+        reviews_disabled: reviewsDisabled,
       });
       
       const updated = response.data.data.place;
@@ -109,6 +113,7 @@ const UpdatePlace = ({
       setLocation("");
       setPriceRange("");
       setNotes("");
+      setReviewsDisabled(false);
       setTagList([]);
     } catch (err) {
       console.error("Error updating place:", err);
@@ -149,6 +154,7 @@ const UpdatePlace = ({
       setLocation("");
       setPriceRange("");
       setNotes("");
+      setReviewsDisabled(false);
       setTagList([]);
     } catch (err) {
       console.error("Error deleting place:", err);
@@ -252,6 +258,21 @@ const UpdatePlace = ({
                     rows={3}
                     placeholder="Parking tips, hours, favorites…"
                   />
+                </div>
+                <div className="mb-3 form-check">
+                  <input
+                    id="updatePlaceReviewsDisabled"
+                    type="checkbox"
+                    className="form-check-input"
+                    checked={reviewsDisabled}
+                    onChange={(e) => setReviewsDisabled(e.target.checked)}
+                  />
+                  <label
+                    className="form-check-label"
+                    htmlFor="updatePlaceReviewsDisabled"
+                  >
+                    Reviews disabled
+                  </label>
                 </div>
                 <div className="mb-1">
                   <label className="form-label d-block">Tags</label>

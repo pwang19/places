@@ -11,6 +11,7 @@ const AddPlace = ({ showModal, onClose }) => {
   const [location, setLocation] = useState("");
   const [priceRange, setPriceRange] = useState("");
   const [notes, setNotes] = useState("");
+  const [reviewsDisabled, setReviewsDisabled] = useState(false);
   const [pendingTags, setPendingTags] = useState([]);
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -22,6 +23,7 @@ const AddPlace = ({ showModal, onClose }) => {
       setLocation("");
       setPriceRange("");
       setNotes("");
+      setReviewsDisabled(false);
       setPendingTags([]);
       setSubmitError("");
       setSubmitting(false);
@@ -60,6 +62,7 @@ const AddPlace = ({ showModal, onClose }) => {
         location: trimmedLocation,
         price_range: priceRange === "" ? null : Number(priceRange),
         notes: notes.trim() || undefined,
+        reviews_disabled: reviewsDisabled,
       });
       const newId = response.data?.data?.place?.id;
       if (newId == null) {
@@ -75,6 +78,7 @@ const AddPlace = ({ showModal, onClose }) => {
       setLocation("");
       setPriceRange("");
       setNotes("");
+      setReviewsDisabled(false);
       setPendingTags([]);
     } catch (err) {
       console.error("Error adding place:", err);
@@ -202,6 +206,21 @@ const AddPlace = ({ showModal, onClose }) => {
                     rows={3}
                     placeholder="Parking tips, hours, favorites…"
                   />
+                </div>
+                <div className="mb-3 form-check">
+                  <input
+                    id="addPlaceReviewsDisabled"
+                    type="checkbox"
+                    className="form-check-input"
+                    checked={reviewsDisabled}
+                    onChange={(e) => setReviewsDisabled(e.target.checked)}
+                  />
+                  <label
+                    className="form-check-label"
+                    htmlFor="addPlaceReviewsDisabled"
+                  >
+                    Reviews disabled
+                  </label>
                 </div>
                 <div className="mb-3">
                   <label className="form-label d-block">

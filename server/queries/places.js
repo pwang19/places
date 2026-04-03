@@ -15,9 +15,9 @@ const PLACE_FROM_REVIEWS = `
   ) reviews ON p.id = reviews.place_id
 `;
 
-const placeSelectSql = `SELECT p.id, p.name, p.location, p.price_range, p.notes,
-  reviews.count,
-  reviews.average_rating,
+const placeSelectSql = `SELECT p.id, p.name, p.location, p.price_range, p.notes, p.reviews_disabled,
+  CASE WHEN p.reviews_disabled THEN NULL ELSE reviews.count END AS count,
+  CASE WHEN p.reviews_disabled THEN NULL ELSE reviews.average_rating END AS average_rating,
   ${tagsJsonSelect("p")}
 ${PLACE_FROM_REVIEWS}`;
 

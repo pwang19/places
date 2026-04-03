@@ -309,6 +309,87 @@ body {
   min-width: 0;
 }
 
+.place-tiles-sort-bar-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.place-tiles-name-search {
+  flex: 0 0 auto;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+.place-tiles-name-search-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.place-tiles-name-search-toggle:hover {
+  background: var(--surface-hover);
+  border-color: var(--primary-hover);
+  color: var(--primary-active);
+}
+
+.place-tiles-name-search-toggle.has-filter {
+  background: rgba(24, 144, 255, 0.12);
+  border-color: var(--primary);
+  color: var(--primary-active);
+}
+
+.place-tiles-name-search-field {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: min(16rem, 100%);
+  max-width: 18rem;
+}
+
+.place-tiles-name-search-input {
+  min-width: 0;
+  flex: 1 1 auto;
+  border-radius: 999px;
+  padding-left: 0.85rem;
+  padding-right: 0.85rem;
+}
+
+.place-tiles-name-search-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.place-tiles-name-search-close:hover {
+  background: var(--surface-hover);
+  color: var(--text-heading);
+}
+
 .place-tiles-filter-section-start {
   margin-left: 0.35rem;
   padding-left: 1rem;
@@ -431,6 +512,7 @@ body {
 .place-tile {
   display: flex;
   flex-direction: column;
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--border-color);
   border-radius: 14px;
@@ -439,10 +521,82 @@ body {
   transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
 }
 
+/* Let notes tooltip extend above the card without clipping */
+.place-tile--has-notes {
+  overflow: visible;
+  z-index: 0;
+}
+
+.place-tile--has-notes:hover,
+.place-tile--has-notes:focus-within {
+  z-index: 3;
+}
+
 .place-tile:hover {
   box-shadow: var(--shadow-md);
   transform: translateY(-2px);
   border-color: var(--primary-hover);
+}
+
+.place-tile-notes-tooltip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  transform: translateX(-50%) translateY(4px);
+  min-width: 200px;
+  max-width: min(320px, calc(100vw - 2rem));
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 0.65rem 0.85rem;
+  background: var(--surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  text-align: left;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.18s ease,
+    visibility 0s linear 0.2s,
+    transform 0.18s ease;
+}
+
+.place-tile--has-notes:hover .place-tile-notes-tooltip,
+.place-tile--has-notes:focus-within .place-tile-notes-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+  transition:
+    opacity 0.2s ease 0.12s,
+    visibility 0s,
+    transform 0.2s ease 0.12s;
+}
+
+.place-tile-notes-tooltip-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.35rem;
+}
+
+.place-tile-notes-tooltip-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .place-tile-notes-tooltip,
+  .place-tile--has-notes:hover .place-tile-notes-tooltip,
+  .place-tile--has-notes:focus-within .place-tile-notes-tooltip {
+    transition: none;
+  }
 }
 
 .place-tile-main {
@@ -632,6 +786,20 @@ body {
   color: var(--text-muted);
   font-weight: 500;
   margin-bottom: 1rem;
+}
+
+.place-details-header .place-details-address-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--primary) 45%, transparent);
+  text-underline-offset: 0.15em;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+
+.place-details-header .place-details-address-link:hover,
+.place-details-header .place-details-address-link:focus-visible {
+  color: var(--primary);
+  text-decoration-color: var(--primary);
 }
 
 .place-details-tags-readonly {

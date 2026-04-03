@@ -9,6 +9,11 @@ import UpdatePlace from "../components/UpdatePlace";
 import { normalizeTags } from "../utils/tags";
 import { formatPriceRangeDollars } from "../utils/priceRange";
 
+const googleMapsUrlForQuery = (query) =>
+  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+    query.trim()
+  )}`;
+
 const PlaceDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -56,6 +61,8 @@ const PlaceDetailsPage = () => {
     ? formatPriceRangeDollars(selectedPlace.place.price_range)
     : null;
 
+  const reviewsDisabled = Boolean(selectedPlace?.place?.reviews_disabled);
+
   return (
     <div>
       <div className="place-details-toolbar mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -88,39 +95,39 @@ const PlaceDetailsPage = () => {
               <i className="fas fa-edit me-2"></i>
               Edit
             </button>
-            <button
-              type="button"
-              onClick={() => setShowAddReviewModal(true)}
-              className="btn btn-modern btn-secondary-modern"
-              style={{
-                borderRadius: "12px",
-                padding: "0.75rem 1.5rem",
-                fontWeight: "600",
-              }}
-              title="Add a review"
-            >
-              <i className="fas fa-plus-circle me-2"></i>
-              Add Review
-            </button>
+            {!reviewsDisabled ? (
+              <button
+                type="button"
+                onClick={() => setShowAddReviewModal(true)}
+                className="btn btn-modern btn-secondary-modern"
+                style={{
+                  borderRadius: "12px",
+                  padding: "0.75rem 1.5rem",
+                  fontWeight: "600",
+                }}
+                title="Add a review"
+              >
+                <i className="fas fa-plus-circle me-2"></i>
+                Add Review
+              </button>
+            ) : null}
           </div>
         ) : null}
       </div>
-      <AddReview
-        showModal={showAddReviewModal}
-        onClose={() => setShowAddReviewModal(false)}
-        onSuccess={reloadPlace}
-      />
+      {!reviewsDisabled ? (
+        <AddReview
+          showModal={showAddReviewModal}
+          onClose={() => setShowAddReviewModal(false)}
+          onSuccess={reloadPlace}
+        />
+      ) : null}
       <UpdatePlace
         showModal={showUpdateModal}
         onClose={() => setShowUpdateModal(false)}
         placeId={id}
         onUpdated={(placeRow) => {
-          setSelectedPlace((sp) =>
-            sp && String(sp.place?.id) === String(placeRow.id)
-              ? { ...sp, place: placeRow }
-              : sp
-          );
           mergePlaceIntoList(placeRow);
+          reloadPlace();
         }}
         onDeleted={() => {
           setSelectedPlace(null);
@@ -156,7 +163,15 @@ const PlaceDetailsPage = () => {
               {selectedPlace.place.location?.trim() ? (
                 <p className="place-details-address mb-0">
                   <i className="fas fa-map-marker-alt me-2" aria-hidden />
-                  {selectedPlace.place.location}
+                  <a
+                    href={googleMapsUrlForQuery(selectedPlace.place.location)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="place-details-address-link"
+                    title="Open in Google Maps"
+                  >
+                    {selectedPlace.place.location}
+                  </a>
                 </p>
               ) : null}
               {normalizeTags(selectedPlace.place.tags).length > 0 ? (
@@ -174,21 +189,23 @@ const PlaceDetailsPage = () => {
                   ))}
                 </div>
               ) : null}
-              <div className="rating-display justify-content-center">
-                <StarRating rating={selectedPlace.place.average_rating} />
-                <span
-                  className="ml-1"
-                  style={{
-                    fontSize: "1.25rem",
-                    fontWeight: "600",
-                    color: "var(--text-muted)",
-                  }}
-                >
-                  {selectedPlace.place.count
-                    ? `(${selectedPlace.place.count} reviews)`
-                    : "(0 reviews)"}
-                </span>
-              </div>
+              {!reviewsDisabled ? (
+                <div className="rating-display justify-content-center">
+                  <StarRating rating={selectedPlace.place.average_rating} />
+                  <span
+                    className="ml-1"
+                    style={{
+                      fontSize: "1.25rem",
+                      fontWeight: "600",
+                      color: "var(--text-muted)",
+                    }}
+                  >
+                    {selectedPlace.place.count
+                      ? `(${selectedPlace.place.count} reviews)`
+                      : "(0 reviews)"}
+                  </span>
+                </div>
+              ) : null}
             </div>
             {selectedPlace.place.notes?.trim() ? (
               <aside
@@ -205,13 +222,15 @@ const PlaceDetailsPage = () => {
               </aside>
             ) : null}
           </div>
-          <div className="reviews-section">
-            <h3 className="mb-4">
-              <i className="fas fa-comments me-2"></i>
-              Reviews
-            </h3>
-            <Reviews reviews={selectedPlace.reviews} />
-          </div>
+          {!reviewsDisabled ? (
+            <div className="reviews-section">
+              <h3 className="mb-4">
+                <i className="fas fa-comments me-2"></i>
+                Reviews
+              </h3>
+              <Reviews reviews={selectedPlace.reviews} />
+            </div>
+          ) : null}
         </>
       )}
     </div>

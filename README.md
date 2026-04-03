@@ -8,7 +8,7 @@ A small full-stack app for listing **places**, **reviews**, and **tags**. It use
 - Add, update, and delete places (name, location, price range)  
 - Add reviews with star ratings  
 - Tag places with autocomplete suggestions; filter the list by tag name  
-- Location search via Mapbox (see client env if you use that feature)
+- Location is a free-text field on add/edit place forms
 
 ## Repository layout
 
@@ -108,6 +108,6 @@ Base path: `/api/v1`
 
 ## Tech stack
 
-- **Frontend:** React 18, React Router, Axios, Bootstrap 5, Mapbox Search (optional)  
+- **Frontend:** React 18, React Router, Axios, Bootstrap 5  
 - **Backend:** Express, `pg`, CORS, Morgan (non-production)  
 - **Database:** PostgreSQL

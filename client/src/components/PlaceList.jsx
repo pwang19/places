@@ -1,4 +1,11 @@
-import React, { useContext, useEffect, useState, useMemo, useCallback } from "react";
+import React, {
+  useContext,
+  useEffect,
+  useState,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
 import PlaceFinder from "../apis/PlaceFinder.js";
 import { PlacesContext } from "../context/PlacesContext";
 import { useNavigate } from "react-router-dom";
@@ -13,6 +20,10 @@ const PlaceList = (props) => {
   const [sortColumn, setSortColumn] = useState(null);
   const [sortDirection, setSortDirection] = useState('asc'); // 'asc' or 'desc'
   const [activeFilterTags, setActiveFilterTags] = useState([]);
+  const [nameSearchOpen, setNameSearchOpen] = useState(false);
+  const [nameSearchInput, setNameSearchInput] = useState("");
+  const [nameSearchApplied, setNameSearchApplied] = useState("");
+  const nameSearchInputRef = useRef(null);
 
   const loadPlaces = useCallback(
     async (tagsArray) => {
@@ -74,10 +85,6 @@ const PlaceList = (props) => {
           aValue = (a.name || '').toLowerCase();
           bValue = (b.name || '').toLowerCase();
           break;
-        case 'location':
-          aValue = (a.location || '').toLowerCase();
-          bValue = (b.location || '').toLowerCase();
-          break;
         case 'price_range':
           // Null / N/A sorts after $–$$$$$ when ascending
           aValue =
@@ -111,9 +118,23 @@ const PlaceList = (props) => {
     });
   }, [places, sortColumn, sortDirection]);
 
+  const displayPlaces = useMemo(() => {
+    if (!sortedPlaces) return sortedPlaces;
+    const q = nameSearchApplied.trim().toLowerCase();
+    if (!q) return sortedPlaces;
+    return sortedPlaces.filter((p) =>
+      (p.name || "").toLowerCase().includes(q)
+    );
+  }, [sortedPlaces, nameSearchApplied]);
+
+  useEffect(() => {
+    if (nameSearchOpen && nameSearchInputRef.current) {
+      nameSearchInputRef.current.focus();
+    }
+  }, [nameSearchOpen]);
+
   const sortLabels = {
     name: "Name",
-    location: "Location",
     price_range: "Price",
     ratings: "Rating",
   };
@@ -153,72 +174,137 @@ const PlaceList = (props) => {
             role="toolbar"
             aria-label="Sort and filter places"
           >
-            <span className="place-tiles-sort-label">Sort by</span>
-            {["name", "location", "price_range", "ratings"].map((column) => (
-              <button
-                key={column}
-                type="button"
-                className={`place-tiles-sort-btn${sortColumn === column ? " is-active" : ""}`}
-                onClick={(e) => handleSortClick(e, column)}
-              >
-                {sortLabels[column]}
-                {getSortIcon(column)}
-              </button>
-            ))}
-            <span
-              className="place-tiles-sort-label place-tiles-filter-section-start"
-              id="place-list-filter-heading"
-            >
-              Filter By Tag(s)
-            </span>
-            <div className="place-tiles-filter-input-wrap">
-              <TagInput
-                id="place-list-tag-filter"
-                placeholder="Add tag, press Enter"
-                showHint={false}
-                aria-labelledby="place-list-filter-heading"
-                aria-describedby="place-list-filter-desc"
-                onSubmitName={async (name) => {
-                  const trimmed = String(name).trim();
-                  if (!trimmed) return;
-                  setActiveFilterTags((prev) => {
-                    if (
-                      prev.some(
-                        (t) => t.toLowerCase() === trimmed.toLowerCase()
-                      )
-                    ) {
-                      return prev;
-                    }
-                    return [...prev, trimmed];
-                  });
-                }}
-              />
-            </div>
-            {activeFilterTags.map((tag) => (
+            <div className="place-tiles-sort-bar-main">
+              <span className="place-tiles-sort-label">Sort by</span>
+              {["name", "price_range", "ratings"].map((column) => (
+                <button
+                  key={column}
+                  type="button"
+                  className={`place-tiles-sort-btn${sortColumn === column ? " is-active" : ""}`}
+                  onClick={(e) => handleSortClick(e, column)}
+                >
+                  {sortLabels[column]}
+                  {getSortIcon(column)}
+                </button>
+              ))}
               <span
-                key={tag}
-                className="place-tiles-tag-filter-pill"
+                className="place-tiles-sort-label place-tiles-filter-section-start"
+                id="place-list-filter-heading"
               >
-                <span className="place-tiles-tag-filter-pill-text">{tag}</span>
+                Filter By Tag(s)
+              </span>
+              <div className="place-tiles-filter-input-wrap">
+                <TagInput
+                  id="place-list-tag-filter"
+                  placeholder="Add tag, press Enter"
+                  showHint={false}
+                  aria-labelledby="place-list-filter-heading"
+                  aria-describedby="place-list-filter-desc"
+                  onSubmitName={async (name) => {
+                    const trimmed = String(name).trim();
+                    if (!trimmed) return;
+                    setActiveFilterTags((prev) => {
+                      if (
+                        prev.some(
+                          (t) => t.toLowerCase() === trimmed.toLowerCase()
+                        )
+                      ) {
+                        return prev;
+                      }
+                      return [...prev, trimmed];
+                    });
+                  }}
+                />
+              </div>
+              {activeFilterTags.map((tag) => (
+                <span
+                  key={tag}
+                  className="place-tiles-tag-filter-pill"
+                >
+                  <span className="place-tiles-tag-filter-pill-text">{tag}</span>
+                  <button
+                    type="button"
+                    className="place-tiles-tag-filter-pill-remove"
+                    title={`Remove filter “${tag}”`}
+                    aria-label={`Remove tag filter ${tag}`}
+                    onClick={() =>
+                      setActiveFilterTags((prev) =>
+                        prev.filter((t) => t !== tag)
+                      )
+                    }
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="place-tiles-name-search">
+              {!nameSearchOpen ? (
                 <button
                   type="button"
-                  className="place-tiles-tag-filter-pill-remove"
-                  title={`Remove filter “${tag}”`}
-                  aria-label={`Remove tag filter ${tag}`}
-                  onClick={() =>
-                    setActiveFilterTags((prev) =>
-                      prev.filter((t) => t !== tag)
-                    )
+                  className={`place-tiles-name-search-toggle${nameSearchApplied.trim() ? " has-filter" : ""}`}
+                  title={
+                    nameSearchApplied.trim()
+                      ? `Name filter: “${nameSearchApplied.trim()}”. Click to edit.`
+                      : "Search by place name"
                   }
+                  aria-label="Open place name search"
+                  aria-expanded={false}
+                  onClick={() => {
+                    setNameSearchInput(nameSearchApplied);
+                    setNameSearchOpen(true);
+                  }}
                 >
-                  ×
+                  <i className="fas fa-search" aria-hidden />
                 </button>
-              </span>
-            ))}
+              ) : (
+                <div className="place-tiles-name-search-field">
+                  <input
+                    ref={nameSearchInputRef}
+                    type="search"
+                    className="form-control form-control-sm place-tiles-name-search-input"
+                    placeholder="Place name…"
+                    aria-label="Filter by place name, press Enter"
+                    value={nameSearchInput}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setNameSearchInput(v);
+                      if (!v.trim()) {
+                        setNameSearchApplied("");
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        const q = nameSearchInput.trim();
+                        setNameSearchApplied(q);
+                      }
+                      if (e.key === "Escape") {
+                        e.preventDefault();
+                        setNameSearchOpen(false);
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="place-tiles-name-search-close"
+                    title="Close name search"
+                    aria-label="Close name search"
+                    onClick={() => setNameSearchOpen(false)}
+                  >
+                    <i className="fas fa-times" aria-hidden />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
           <p
             id="place-list-filter-desc"
-            className={`place-tiles-filter-hint text-muted small mb-0${activeFilterTags.length === 0 ? " visually-hidden" : ""}`}
+            className={`place-tiles-filter-hint text-muted small mb-0${
+              activeFilterTags.length === 0 && !nameSearchApplied.trim()
+                ? " visually-hidden"
+                : ""
+            }`}
           >
             {activeFilterTags.length > 0 ? (
               <>
@@ -226,30 +312,62 @@ const PlaceList = (props) => {
                 <span className="text-body">
                   {activeFilterTags.map((t) => `"${t}"`).join(", ")}
                 </span>
+                {nameSearchApplied.trim() ? (
+                  <>
+                    {" "}
+                    · Name contains{" "}
+                    <span className="text-body">
+                      &quot;{nameSearchApplied.trim()}&quot;
+                    </span>
+                  </>
+                ) : null}
+              </>
+            ) : nameSearchApplied.trim() ? (
+              <>
+                Showing places whose name contains{" "}
+                <span className="text-body">
+                  &quot;{nameSearchApplied.trim()}&quot;
+                </span>
+                .
               </>
             ) : (
               <>
                 Add tags with Enter. A place must match every selected tag
-                (partial name match). Remove a tag with the pill ×.
+                (partial name match). Remove a tag with the pill ×. Use the
+                search icon to filter by place name (Enter to apply).
               </>
             )}
           </p>
         </div>
         <div className="place-tiles-grid">
-          {sortedPlaces && sortedPlaces.length === 0 ? (
-            <p className="place-tiles-empty text-muted mb-0">No places to show.</p>
+          {!displayPlaces || displayPlaces.length === 0 ? (
+            <p className="place-tiles-empty text-muted mb-0">
+              {sortedPlaces &&
+              sortedPlaces.length > 0 &&
+              nameSearchApplied.trim()
+                ? "No places match that name."
+                : "No places to show."}
+            </p>
           ) : null}
-          {sortedPlaces &&
-            sortedPlaces.map((place) => {
+          {displayPlaces &&
+            displayPlaces.map((place) => {
               const tags = normalizeTags(place.tags);
               const priceLabel = formatPriceRangeDollars(place.price_range);
+              const notesText = place.notes?.trim() || "";
+              const hasNotes = Boolean(notesText);
               return (
-                <article className="place-tile" key={place.id}>
+                <article
+                  className={`place-tile${hasNotes ? " place-tile--has-notes" : ""}`}
+                  key={place.id}
+                >
                   <div
                     className="place-tile-main"
                     onClick={() => handlePlaceSelect(place.id)}
                     role="link"
                     tabIndex={0}
+                    aria-describedby={
+                      hasNotes ? `place-tile-notes-${place.id}` : undefined
+                    }
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
@@ -286,10 +404,26 @@ const PlaceList = (props) => {
                         ))
                       )}
                     </div>
-                    <div className="place-tile-rating rating-display">
-                      {renderRating(place)}
-                    </div>
+                    {!place.reviews_disabled ? (
+                      <div className="place-tile-rating rating-display">
+                        {renderRating(place)}
+                      </div>
+                    ) : null}
                   </div>
+                  {hasNotes ? (
+                    <div
+                      id={`place-tile-notes-${place.id}`}
+                      className="place-tile-notes-tooltip"
+                      role="tooltip"
+                    >
+                      <span className="place-tile-notes-tooltip-label">
+                        Notes
+                      </span>
+                      <p className="place-tile-notes-tooltip-text mb-0">
+                        {notesText}
+                      </p>
+                    </div>
+                  ) : null}
                 </article>
               );
             })}

@@ -11,6 +11,15 @@ function normalizeNotes(body) {
   return s.length ? s : null;
 }
 
+function normalizeReviewsDisabled(body) {
+  if (!body || body.reviews_disabled == null) return false;
+  if (typeof body.reviews_disabled === "boolean") return body.reviews_disabled;
+  const s = String(body.reviews_disabled).toLowerCase();
+  if (s === "true" || s === "1") return true;
+  if (s === "false" || s === "0" || s === "") return false;
+  return Boolean(body.reviews_disabled);
+}
+
 function normalizePriceRange(body) {
   if (
     !body ||
@@ -54,12 +63,13 @@ router.post(
   "/",
   asyncHandler(async (req, res) => {
     const results = await db.query(
-      "INSERT INTO places (name, location, price_range, notes) VALUES ($1, $2, $3, $4) RETURNING id",
+      "INSERT INTO places (name, location, price_range, notes, reviews_disabled) VALUES ($1, $2, $3, $4, $5) RETURNING id",
       [
         req.body.name,
         req.body.location,
         normalizePriceRange(req.body),
         normalizeNotes(req.body),
+        normalizeReviewsDisabled(req.body),
       ]
     );
     const placeRow = await fetchPlaceRowById(results.rows[0].id);
@@ -80,6 +90,16 @@ router.get(
         message: "Place not found",
       });
     }
+    if (placeRow.reviews_disabled) {
+      res.status(200).json({
+        status: "Success",
+        data: {
+          place: placeRow,
+          reviews: [],
+        },
+      });
+      return;
+    }
     const reviews = await db.query(
       "SELECT * FROM reviews WHERE place_id = $1 ORDER BY id DESC",
       [req.params.id]
@@ -98,12 +118,13 @@ router.put(
   "/:id",
   asyncHandler(async (req, res) => {
     const results = await db.query(
-      "UPDATE places SET name = $1, location = $2, price_range = $3, notes = $4 WHERE id = $5 RETURNING id",
+      "UPDATE places SET name = $1, location = $2, price_range = $3, notes = $4, reviews_disabled = $5 WHERE id = $6 RETURNING id",
       [
         req.body.name,
         req.body.location,
         normalizePriceRange(req.body),
         normalizeNotes(req.body),
+        normalizeReviewsDisabled(req.body),
         req.params.id,
       ]
     );
@@ -191,6 +212,16 @@ router.delete(
 router.post(
   "/:id/addReview",
   asyncHandler(async (req, res) => {
+    const placeRow = await fetchPlaceRowById(req.params.id);
+    if (!placeRow) {
+      return res.status(404).json({ status: "Error", message: "Place not found" });
+    }
+    if (placeRow.reviews_disabled) {
+      return res.status(403).json({
+        status: "Error",
+        message: "Reviews are disabled for this place",
+      });
+    }
     const newReview = await db.query(
       "INSERT INTO reviews (place_id, name, review, rating) VALUES ($1, $2, $3, $4) RETURNING *",
       [req.params.id, req.body.name, req.body.review, req.body.rating]

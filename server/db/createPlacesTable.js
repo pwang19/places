@@ -9,7 +9,8 @@ const createPlacesTable = async () => {
         name VARCHAR(255) NOT NULL,
         location VARCHAR(255) NOT NULL,
         price_range INT CHECK (price_range IS NULL OR (price_range >= 1 AND price_range <= 5)),
-        notes TEXT
+        notes TEXT,
+        reviews_disabled BOOLEAN NOT NULL DEFAULT FALSE
       );
     `);
     console.log("✅ Places table created successfully!");
