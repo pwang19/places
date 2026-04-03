@@ -1,21 +1,38 @@
 import React, { useState, useEffect } from "react";
 import PlaceFinder from "../apis/PlaceFinder";
 import { useParams } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { postingAsLabel } from "../utils/displayName";
 
-const AddReview = ({ showModal, onClose, onSuccess }) => {
+const AddReview = ({ showModal, onClose, onSuccess, editingReview = null }) => {
   const { id } = useParams();
+  const { user } = useAuth();
 
-  const [name, setName] = useState("");
   const [rating, setRating] = useState("Rating");
   const [reviewText, setReviewText] = useState("");
+  const [submitError, setSubmitError] = useState("");
+
+  const isEdit = Boolean(editingReview);
 
   useEffect(() => {
     if (!showModal) {
-      setName("");
       setRating("Rating");
       setReviewText("");
+      setSubmitError("");
     }
   }, [showModal]);
+
+  useEffect(() => {
+    if (showModal && editingReview) {
+      setRating(String(editingReview.rating));
+      setReviewText(editingReview.review || "");
+      setSubmitError("");
+    } else if (showModal && !editingReview) {
+      setRating("Rating");
+      setReviewText("");
+      setSubmitError("");
+    }
+  }, [showModal, editingReview]);
 
   useEffect(() => {
     if (showModal) {
@@ -33,24 +50,40 @@ const AddReview = ({ showModal, onClose, onSuccess }) => {
       e.stopPropagation();
       e.preventDefault();
     }
+    setSubmitError("");
     onClose();
   };
 
   const handleSubmitReview = async (e) => {
     e.preventDefault();
+    setSubmitError("");
     if (!id || rating === "Rating") return;
+    const ratingNum = Number(rating);
+    if (!Number.isInteger(ratingNum) || ratingNum < 1 || ratingNum > 5) return;
+
     try {
-      await PlaceFinder.post(`/${id}/addReview`, {
-        name: name,
-        review: reviewText,
-        rating: rating,
-      });
+      if (isEdit) {
+        await PlaceFinder.put(`/${id}/reviews/${editingReview.id}`, {
+          review: reviewText,
+          rating: ratingNum,
+        });
+      } else {
+        await PlaceFinder.post(`/${id}/addReview`, {
+          review: reviewText,
+          rating: ratingNum,
+        });
+      }
       await onSuccess?.();
       onClose();
-      setName("");
       setRating("Rating");
       setReviewText("");
     } catch (err) {
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        "Could not save the review.";
+      setSubmitError(String(msg));
       console.error("Error submitting review:", err);
     }
   };
@@ -84,8 +117,10 @@ const AddReview = ({ showModal, onClose, onSuccess }) => {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h5 className="modal-title" id="add-review-modal-title">
-                <i className="fas fa-plus-circle me-2"></i>
-                Add Review
+                <i
+                  className={`fas ${isEdit ? "fa-edit" : "fa-plus-circle"} me-2`}
+                ></i>
+                {isEdit ? "Edit Review" : "Add Review"}
               </h5>
               <button
                 type="button"
@@ -96,37 +131,25 @@ const AddReview = ({ showModal, onClose, onSuccess }) => {
             </div>
             <form onSubmit={handleSubmitReview}>
               <div className="modal-body">
-                <div className="row g-3">
-                  <div className="col-md-7">
-                    <label
-                      htmlFor="add-review-name"
-                      className="form-label"
-                      style={{
-                        color: "var(--text-heading)",
-                        fontWeight: "600",
-                      }}
-                    >
-                      <i className="fas fa-user me-2"></i>
-                      Your Name
-                    </label>
-                    <input
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      type="text"
-                      className="form-control"
-                      id="add-review-name"
-                      style={{
-                        background: "var(--surface)",
-                        border: "2px solid var(--border-color)",
-                        borderRadius: "10px",
-                        color: "var(--text-primary)",
-                        padding: "0.75rem 1rem",
-                      }}
-                      placeholder="Enter your name"
-                      required
-                    />
+                {submitError ? (
+                  <div className="alert alert-danger mb-3" role="alert">
+                    {submitError}
                   </div>
-                  <div className="col-md-5">
+                ) : null}
+                {!isEdit && user ? (
+                  <p
+                    className="mb-3 small"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    <i className="fas fa-user me-2" aria-hidden />
+                    Posting as{" "}
+                    <strong style={{ color: "var(--text-heading)" }}>
+                      {postingAsLabel(user)}
+                    </strong>
+                  </p>
+                ) : null}
+                <div className="row g-3">
+                  <div className="col-12 col-md-5">
                     <label
                       htmlFor="add-review-rating"
                       className="form-label"
@@ -209,7 +232,7 @@ const AddReview = ({ showModal, onClose, onSuccess }) => {
                   style={{ minWidth: "150px" }}
                 >
                   <i className="fas fa-paper-plane me-2"></i>
-                  Submit Review
+                  {isEdit ? "Save changes" : "Submit Review"}
                 </button>
               </div>
             </form>

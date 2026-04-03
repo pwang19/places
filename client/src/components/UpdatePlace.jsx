@@ -248,7 +248,7 @@ const UpdatePlace = ({
                 </div>
                 <div className="mb-3">
                   <label htmlFor="updatePlaceNotes" className="form-label">
-                    Notes <span className="text-muted fw-normal">(optional)</span>
+                    Public notes <span className="text-muted fw-normal">(optional)</span>
                   </label>
                   <textarea
                     id="updatePlaceNotes"

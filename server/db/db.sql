@@ -44,8 +44,20 @@ CREATE TABLE reviews (
     place_id BIGINT NOT NULL REFERENCES places(id),
     name VARCHAR(50) NOT NULL,
     review TEXT NOT NULL,
-    rating INT NOT NULL check(rating >=1 and rating <=5)
+    rating INT NOT NULL check(rating >=1 and rating <=5),
+    user_sub VARCHAR(255) NULL
 );
 
 -- INSERT INTO REVIEWS
 INSERT INTO reviews (place_id, name, review, rating) values (9, 'Eric', 'Place was splendid', 4);
+
+-- Per-user private notes (ciphertext only; see server env PRIVATE_NOTES_KEY)
+CREATE TABLE place_private_notes (
+    id BIGSERIAL NOT NULL PRIMARY KEY,
+    place_id BIGINT NOT NULL REFERENCES places(id) ON DELETE CASCADE,
+    user_sub VARCHAR(255) NOT NULL,
+    note_ciphertext TEXT NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(place_id, user_sub)
+);
+CREATE INDEX idx_place_private_notes_place_user ON place_private_notes(place_id, user_sub);

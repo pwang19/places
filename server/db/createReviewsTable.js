@@ -9,7 +9,8 @@ const createReviewsTable = async () => {
         place_id BIGINT NOT NULL REFERENCES places(id) ON DELETE CASCADE,
         name VARCHAR(50) NOT NULL,
         review TEXT NOT NULL,
-        rating INT NOT NULL check(rating >=1 and rating <=5)
+        rating INT NOT NULL check(rating >=1 and rating <=5),
+        user_sub VARCHAR(255) NULL
       );
     `);
     console.log("✅ Reviews table created successfully!");

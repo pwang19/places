@@ -6,6 +6,7 @@ import StarRating from "../components/StarRating";
 import Reviews from "../components/Reviews";
 import AddReview from "../components/AddReview";
 import UpdatePlace from "../components/UpdatePlace";
+import PrivatePlaceNote from "../components/PrivatePlaceNote";
 import UserMenu from "../components/UserMenu";
 import { normalizeTags } from "../utils/tags";
 import { formatPriceRangeDollars } from "../utils/priceRange";
@@ -22,6 +23,17 @@ const PlaceDetailsPage = () => {
     useContext(PlacesContext);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showAddReviewModal, setShowAddReviewModal] = useState(false);
+  const [editingReview, setEditingReview] = useState(null);
+
+  const closeReviewModal = () => {
+    setShowAddReviewModal(false);
+    setEditingReview(null);
+  };
+
+  const openAddReview = () => {
+    setEditingReview(null);
+    setShowAddReviewModal(true);
+  };
 
   const mergePlaceIntoList = useCallback((placeRow) => {
     if (!placeRow) return;
@@ -102,7 +114,7 @@ const PlaceDetailsPage = () => {
             {!reviewsDisabled ? (
               <button
                 type="button"
-                onClick={() => setShowAddReviewModal(true)}
+                onClick={openAddReview}
                 className="btn btn-modern btn-secondary-modern"
                 style={{
                   borderRadius: "12px",
@@ -120,9 +132,10 @@ const PlaceDetailsPage = () => {
       </div>
       {!reviewsDisabled ? (
         <AddReview
-          showModal={showAddReviewModal}
-          onClose={() => setShowAddReviewModal(false)}
+          showModal={showAddReviewModal || editingReview != null}
+          onClose={closeReviewModal}
           onSuccess={reloadPlace}
+          editingReview={editingReview}
         />
       ) : null}
       <UpdatePlace
@@ -140,13 +153,7 @@ const PlaceDetailsPage = () => {
       />
       {selectedPlace && (
         <>
-          <div
-            className={`place-details-hero${
-              selectedPlace.place.notes?.trim()
-                ? " place-details-hero--with-notes"
-                : ""
-            }`}
-          >
+          <div className="place-details-hero place-details-hero--with-side-panel">
             <div
               className={`place-details-header${
                 selectedPlace.place.location?.trim()
@@ -193,6 +200,17 @@ const PlaceDetailsPage = () => {
                   ))}
                 </div>
               ) : null}
+              {selectedPlace.place.notes?.trim() ? (
+                <div className="place-details-public-notes mt-4 text-start w-100">
+                  <h3 className="place-details-public-notes-heading">
+                    <i className="fas fa-sticky-note me-2" aria-hidden />
+                    Public notes
+                  </h3>
+                  <p className="place-details-notes-body place-details-public-notes-body mb-0">
+                    {selectedPlace.place.notes}
+                  </p>
+                </div>
+              ) : null}
               {!reviewsDisabled ? (
                 <div className="rating-display justify-content-center">
                   <StarRating rating={selectedPlace.place.average_rating} />
@@ -211,20 +229,11 @@ const PlaceDetailsPage = () => {
                 </div>
               ) : null}
             </div>
-            {selectedPlace.place.notes?.trim() ? (
-              <aside
-                className="place-details-notes-panel"
-                aria-label="Place notes"
-              >
-                <h2 className="place-details-notes-heading">
-                  <i className="fas fa-sticky-note me-2" aria-hidden />
-                  Notes
-                </h2>
-                <p className="place-details-notes-body mb-0">
-                  {selectedPlace.place.notes}
-                </p>
-              </aside>
-            ) : null}
+            <PrivatePlaceNote
+              placeId={id}
+              privateNote={selectedPlace.place.private_note}
+              onSaved={reloadPlace}
+            />
           </div>
           {!reviewsDisabled ? (
             <div className="reviews-section">
@@ -232,7 +241,19 @@ const PlaceDetailsPage = () => {
                 <i className="fas fa-comments me-2"></i>
                 Reviews
               </h3>
-              <Reviews reviews={selectedPlace.reviews} />
+              <Reviews
+                reviews={selectedPlace.reviews}
+                placeId={id}
+                onReviewsChanged={reloadPlace}
+                onEditReview={(r) => {
+                  setShowAddReviewModal(false);
+                  setEditingReview({
+                    id: r.id,
+                    review: r.review,
+                    rating: r.rating,
+                  });
+                }}
+              />
             </div>
           ) : null}
         </>

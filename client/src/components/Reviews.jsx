@@ -1,7 +1,35 @@
-import React from "react";
+import React, { useState } from "react";
+import PlaceFinder from "../apis/PlaceFinder";
 import StarRating from "./StarRating";
 
-const Reviews = ({ reviews }) => {
+const Reviews = ({ reviews, placeId, onReviewsChanged, onEditReview }) => {
+  const [deletingId, setDeletingId] = useState(null);
+
+  const handleDelete = async (review) => {
+    if (!placeId || !review?.id) return;
+    if (
+      !window.confirm(
+        "Delete this review? This cannot be undone."
+      )
+    ) {
+      return;
+    }
+    setDeletingId(review.id);
+    try {
+      await PlaceFinder.delete(`/${placeId}/reviews/${review.id}`);
+      await onReviewsChanged?.();
+    } catch (err) {
+      console.error(err);
+      const msg =
+        err.response?.data?.message ||
+        err.message ||
+        "Could not delete the review.";
+      window.alert(String(msg));
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   if (!reviews || reviews.length === 0) {
     return (
       <div className="text-center py-5">
@@ -61,6 +89,48 @@ const Reviews = ({ reviews }) => {
                   {review.review}
                 </p>
               </div>
+              {review.owned_by_me ? (
+                <div
+                  className="card-footer d-flex flex-wrap gap-2 justify-content-end"
+                  style={{
+                    background: "transparent",
+                    borderTop: "1px solid var(--border-color)",
+                    padding: "0.75rem 1.25rem",
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-modern btn-warning-modern"
+                    onClick={() => onEditReview?.(review)}
+                    disabled={deletingId === review.id}
+                  >
+                    <i className="fas fa-edit me-1" aria-hidden />
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-modern btn-secondary-modern"
+                    onClick={() => handleDelete(review)}
+                    disabled={deletingId === review.id}
+                  >
+                    {deletingId === review.id ? (
+                      <>
+                        <span
+                          className="spinner-border spinner-border-sm me-1"
+                          role="status"
+                          aria-hidden
+                        />
+                        Deleting…
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-trash me-1" aria-hidden />
+                        Delete
+                      </>
+                    )}
+                  </button>
+                </div>
+              ) : null}
             </div>
           </div>
         );

@@ -417,7 +417,7 @@ const PlaceList = (props) => {
                       role="tooltip"
                     >
                       <span className="place-tile-notes-tooltip-label">
-                        Notes
+                        Public notes
                       </span>
                       <p className="place-tile-notes-tooltip-text mb-0">
                         {notesText}

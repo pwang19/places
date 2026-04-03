@@ -2,6 +2,7 @@ const express = require("express");
 const db = require("../db");
 const { fetchPlaceRowById, listPlaceRows } = require("../queries/places");
 const asyncHandler = require("../middleware/asyncHandler");
+const { encrypt, decrypt } = require("../services/privateNoteCrypto");
 
 const router = express.Router();
 
@@ -47,6 +48,65 @@ function normalizeTagQuery(query) {
   return list.map((t) => String(t).trim()).filter(Boolean);
 }
 
+function displayNameFromUser(user) {
+  const rawName = user && user.name != null ? String(user.name).trim() : "";
+  if (rawName) return rawName.slice(0, 50);
+  const email = user && user.email ? String(user.email) : "";
+  if (email) {
+    const local = email.split("@")[0];
+    if (local && local.trim()) return local.trim().slice(0, 50);
+  }
+  return "Member";
+}
+
+function parseReviewBody(body) {
+  if (!body || body.review == null) {
+    const err = new Error("review is required");
+    err.status = 400;
+    throw err;
+  }
+  const review = String(body.review).trim();
+  if (!review) {
+    const err = new Error("review cannot be empty");
+    err.status = 400;
+    throw err;
+  }
+  const n = Number(body.rating);
+  if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1 || n > 5) {
+    const err = new Error("rating must be an integer from 1 to 5");
+    err.status = 400;
+    throw err;
+  }
+  return { review, rating: n };
+}
+
+function reviewForClient(row, currentSub) {
+  const owned = Boolean(row.user_sub && row.user_sub === currentSub);
+  return {
+    id: row.id,
+    place_id: row.place_id,
+    name: row.name,
+    review: row.review,
+    rating: row.rating,
+    owned_by_me: owned,
+  };
+}
+
+async function attachPrivateNote(placeRow, userSub) {
+  if (!placeRow) return null;
+  const base = { ...placeRow };
+  const r = await db.query(
+    "SELECT note_ciphertext FROM place_private_notes WHERE place_id = $1 AND user_sub = $2",
+    [placeRow.id, userSub]
+  );
+  if (!r.rows.length) {
+    base.private_note = null;
+    return base;
+  }
+  base.private_note = decrypt(r.rows[0].note_ciphertext);
+  return base;
+}
+
 router.get(
   "/",
   asyncHandler(async (req, res) => {
@@ -73,9 +133,10 @@ router.post(
       ]
     );
     const placeRow = await fetchPlaceRowById(results.rows[0].id);
+    const placeOut = await attachPrivateNote(placeRow, req.user.sub);
     res.status(201).json({
       status: "Success",
-      data: { place: placeRow },
+      data: { place: placeOut },
     });
   })
 );
@@ -90,11 +151,12 @@ router.get(
         message: "Place not found",
       });
     }
+    const placeOut = await attachPrivateNote(placeRow, req.user.sub);
     if (placeRow.reviews_disabled) {
       res.status(200).json({
         status: "Success",
         data: {
-          place: placeRow,
+          place: placeOut,
           reviews: [],
         },
       });
@@ -104,13 +166,109 @@ router.get(
       "SELECT * FROM reviews WHERE place_id = $1 ORDER BY id DESC",
       [req.params.id]
     );
+    const currentSub = req.user.sub;
+    const reviewsOut = reviews.rows.map((row) => reviewForClient(row, currentSub));
     res.status(200).json({
       status: "Success",
       data: {
-        place: placeRow,
-        reviews: reviews.rows,
+        place: placeOut,
+        reviews: reviewsOut,
       },
     });
+  })
+);
+
+router.put(
+  "/:id/reviews/:reviewId",
+  asyncHandler(async (req, res) => {
+    const placeRow = await fetchPlaceRowById(req.params.id);
+    if (!placeRow) {
+      return res.status(404).json({ status: "Error", message: "Place not found" });
+    }
+    const { review, rating } = parseReviewBody(req.body);
+    const result = await db.query(
+      `UPDATE reviews SET review = $1, rating = $2
+       WHERE id = $3 AND place_id = $4 AND user_sub = $5
+       RETURNING id, place_id, name, review, rating, user_sub`,
+      [review, rating, req.params.reviewId, req.params.id, req.user.sub]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ status: "Error", message: "Review not found" });
+    }
+    const row = result.rows[0];
+    res.status(200).json({
+      status: "Success",
+      data: { review: reviewForClient(row, req.user.sub) },
+    });
+  })
+);
+
+router.delete(
+  "/:id/reviews/:reviewId",
+  asyncHandler(async (req, res) => {
+    const placeRow = await fetchPlaceRowById(req.params.id);
+    if (!placeRow) {
+      return res.status(404).json({ status: "Error", message: "Place not found" });
+    }
+    const result = await db.query(
+      "DELETE FROM reviews WHERE id = $1 AND place_id = $2 AND user_sub = $3",
+      [req.params.reviewId, req.params.id, req.user.sub]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ status: "Error", message: "Review not found" });
+    }
+    res.status(200).json({ status: "Success", message: "Review deleted" });
+  })
+);
+
+router.put(
+  "/:id/private-note",
+  asyncHandler(async (req, res) => {
+    const placeRow = await fetchPlaceRowById(req.params.id);
+    if (!placeRow) {
+      return res.status(404).json({ status: "Error", message: "Place not found" });
+    }
+    const raw = req.body && req.body.note != null ? String(req.body.note) : "";
+    const trimmed = raw.trim();
+    const userSub = req.user.sub;
+    if (!trimmed) {
+      await db.query(
+        "DELETE FROM place_private_notes WHERE place_id = $1 AND user_sub = $2",
+        [req.params.id, userSub]
+      );
+      const updated = await fetchPlaceRowById(req.params.id);
+      const placeOut = await attachPrivateNote(updated, userSub);
+      res.status(200).json({ status: "Success", data: { place: placeOut } });
+      return;
+    }
+    const ciphertext = encrypt(trimmed);
+    await db.query(
+      `INSERT INTO place_private_notes (place_id, user_sub, note_ciphertext)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (place_id, user_sub)
+       DO UPDATE SET note_ciphertext = EXCLUDED.note_ciphertext, updated_at = NOW()`,
+      [req.params.id, userSub, ciphertext]
+    );
+    const updated = await fetchPlaceRowById(req.params.id);
+    const placeOut = await attachPrivateNote(updated, userSub);
+    res.status(200).json({ status: "Success", data: { place: placeOut } });
+  })
+);
+
+router.delete(
+  "/:id/private-note",
+  asyncHandler(async (req, res) => {
+    const placeRow = await fetchPlaceRowById(req.params.id);
+    if (!placeRow) {
+      return res.status(404).json({ status: "Error", message: "Place not found" });
+    }
+    await db.query(
+      "DELETE FROM place_private_notes WHERE place_id = $1 AND user_sub = $2",
+      [req.params.id, req.user.sub]
+    );
+    const updated = await fetchPlaceRowById(req.params.id);
+    const placeOut = await attachPrivateNote(updated, req.user.sub);
+    res.status(200).json({ status: "Success", data: { place: placeOut } });
   })
 );
 
@@ -132,9 +290,10 @@ router.put(
       return res.status(404).json({ status: "Error", message: "Place not found" });
     }
     const placeRow = await fetchPlaceRowById(req.params.id);
+    const placeOut = await attachPrivateNote(placeRow, req.user.sub);
     res.status(200).json({
       status: "Success",
-      data: { place: placeRow },
+      data: { place: placeOut },
     });
   })
 );
@@ -222,13 +381,16 @@ router.post(
         message: "Reviews are disabled for this place",
       });
     }
+    const { review, rating } = parseReviewBody(req.body);
+    const displayName = displayNameFromUser(req.user);
     const newReview = await db.query(
-      "INSERT INTO reviews (place_id, name, review, rating) VALUES ($1, $2, $3, $4) RETURNING *",
-      [req.params.id, req.body.name, req.body.review, req.body.rating]
+      "INSERT INTO reviews (place_id, name, review, rating, user_sub) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+      [req.params.id, displayName, review, rating, req.user.sub]
     );
+    const row = newReview.rows[0];
     res.status(201).json({
       status: "Success",
-      data: { review: newReview.rows[0] },
+      data: { review: reviewForClient(row, req.user.sub) },
     });
   })
 );
