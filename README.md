@@ -90,6 +90,27 @@ REACT_APP_API_URL=http://localhost:5001/api/v1
 
 Restart the React dev server after changing env vars.
 
+### 6. Google sign-in (acts2.network)
+
+The app expects users to sign in with Google using an **@acts2.network** address (configurable). In [Google Cloud Console](https://console.cloud.google.com/), create an OAuth **Web client ID** and add **Authorized JavaScript origins** (e.g. `http://localhost:3000` and your production URL).
+
+**Server** — add to `server/.env` (see [`server/.env.example`](server/.env.example)):
+
+| Variable | Purpose |
+|----------|---------|
+| `GOOGLE_CLIENT_ID` | Same Web client ID as the React app |
+| `SESSION_SECRET` | Long random string used to sign the session cookie |
+| `CLIENT_ORIGIN` | Browser origin allowed for CORS (default `http://localhost:3000`; comma-separate multiple) |
+| `ALLOWED_EMAIL_DOMAIN` | Email must end with `@` + this domain (default `acts2.network`) |
+| `TRUST_PROXY` | Set to `true` when the API sits behind a reverse proxy (HTTPS) |
+
+**Client** — add to `client/.env` (see [`client/.env.example`](client/.env.example)):
+
+| Variable | Purpose |
+|----------|---------|
+| `REACT_APP_GOOGLE_CLIENT_ID` | Same value as `GOOGLE_CLIENT_ID` on the server |
+| `REACT_APP_ALLOWED_EMAIL_DOMAIN` | Optional; must match server `ALLOWED_EMAIL_DOMAIN` for the sign-in hint (default `acts2.network`) |
+
 ## API (short reference)
 
 Base path: `/api/v1`
@@ -105,6 +126,11 @@ Base path: `/api/v1`
 | POST | `/places/:id/tags` | Add or link a tag (`{ "name": "..." }`) |
 | DELETE | `/places/:id/tags/:tagId` | Remove tag from place |
 | GET | `/tags?q=...` | Tag name search (autocomplete) |
+| POST | `/auth/google` | Exchange Google ID token for session cookie (`{ "credential": "<jwt>" }`) |
+| GET | `/auth/me` | Current user or 401 |
+| POST | `/auth/logout` | Clear session |
+
+All routes except `/auth/*` require a valid session cookie.
 
 ## Tech stack
 

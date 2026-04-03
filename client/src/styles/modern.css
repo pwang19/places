@@ -44,6 +44,68 @@ body {
   padding: 2rem 1rem;
 }
 
+/* Auth gate (Google sign-in) */
+.auth-gate {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.auth-card {
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  padding: 2.5rem 2rem;
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+}
+
+.auth-card--plain {
+  padding: 2rem;
+}
+
+.auth-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-heading);
+  margin-bottom: 0.75rem;
+}
+
+.auth-subtitle {
+  color: var(--text-muted);
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+}
+
+.auth-message {
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.auth-message--error {
+  color: var(--color-red);
+}
+
+.auth-google-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+.auth-loading {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.user-menu-email {
+  max-width: 14rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
 /* Modern Header */
 .modern-header {
   background: var(--surface);
@@ -72,7 +134,8 @@ body {
   50% { transform: scale(1.1); opacity: 0.85; }
 }
 
-.modern-header h1 {
+.modern-header h1,
+.modern-header .modern-header-title {
   font-weight: 700;
   font-size: 3rem;
   color: var(--text-heading);
@@ -80,6 +143,18 @@ body {
   margin: 0;
   position: relative;
   z-index: 1;
+}
+
+.modern-header-title {
+  text-align: left;
+  flex: 1;
+  min-width: 0;
+}
+
+.modern-header-actions {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
 }
 
 .modern-header .btn {
@@ -844,7 +919,8 @@ body {
 
 /* Responsive */
 @media (max-width: 768px) {
-  .modern-header h1 {
+  .modern-header h1,
+  .modern-header .modern-header-title {
     font-size: 2rem;
   }
   

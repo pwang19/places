@@ -6,6 +6,7 @@ import StarRating from "../components/StarRating";
 import Reviews from "../components/Reviews";
 import AddReview from "../components/AddReview";
 import UpdatePlace from "../components/UpdatePlace";
+import UserMenu from "../components/UserMenu";
 import { normalizeTags } from "../utils/tags";
 import { formatPriceRangeDollars } from "../utils/priceRange";
 
@@ -66,21 +67,24 @@ const PlaceDetailsPage = () => {
   return (
     <div>
       <div className="place-details-toolbar mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => navigate("/")}
-          className="btn btn-modern btn-primary-modern"
-          style={{
-            borderRadius: "12px",
-            padding: "0.75rem 1.5rem",
-            fontWeight: "600",
-          }}
-        >
-          <i className="fas fa-arrow-left me-2"></i>
-          Back to Places
-        </button>
+        <div className="d-flex flex-wrap gap-2 align-items-center">
+          <button
+            type="button"
+            onClick={() => navigate("/")}
+            className="btn btn-modern btn-primary-modern"
+            style={{
+              borderRadius: "12px",
+              padding: "0.75rem 1.5rem",
+              fontWeight: "600",
+            }}
+          >
+            <i className="fas fa-arrow-left me-2"></i>
+            Back to Places
+          </button>
+          <UserMenu />
+        </div>
         {id ? (
-          <div className="d-flex flex-wrap gap-2">
+          <div className="d-flex flex-wrap gap-2 align-items-center">
             <button
               type="button"
               onClick={() => setShowUpdateModal(true)}
