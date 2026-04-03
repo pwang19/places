@@ -7,7 +7,7 @@ export const PlacesContextProvider = (props) => {
   const [selectedPlace, setSelectedPlace] = useState(null);
 
   const addPlaces = (place) => {
-    setPlaces([...places, place]);
+    setPlaces((prev) => [...prev, place]);
   };
 
   return (

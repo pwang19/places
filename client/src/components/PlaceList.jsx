@@ -3,27 +3,36 @@ import PlaceFinder from "../apis/PlaceFinder.js";
 import { PlacesContext } from "../context/PlacesContext";
 import { useNavigate } from "react-router-dom";
 import StarRating from "../components/StarRating";
-import UpdatePlace from "../components/UpdatePlace";
 import TagInput from "../components/TagInput";
 import { normalizeTags } from "../utils/tags";
+import { formatPriceRangeDollars } from "../utils/priceRange";
 
 const PlaceList = (props) => {
   const { places, setPlaces } = useContext(PlacesContext);
   let navigate = useNavigate(); // useNavigate function to navigate to place details page
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [placeToDelete, setPlaceToDelete] = useState(null);
-  const [showUpdateModal, setShowUpdateModal] = useState(false);
-  const [placeToUpdate, setPlaceToUpdate] = useState(null);
   const [sortColumn, setSortColumn] = useState(null);
   const [sortDirection, setSortDirection] = useState('asc'); // 'asc' or 'desc'
-  const [activeTagFilter, setActiveTagFilter] = useState("");
+  const [activeFilterTags, setActiveFilterTags] = useState([]);
 
   const loadPlaces = useCallback(
-    async (tag) => {
+    async (tagsArray) => {
       try {
-        const trimmed = tag && String(tag).trim();
+        const list = Array.isArray(tagsArray) ? tagsArray : [];
         const response = await PlaceFinder.get("/", {
-          params: trimmed ? { tag: trimmed } : {},
+          params:
+            list.length > 0
+              ? { tag: list }
+              : {},
+          paramsSerializer: {
+            serialize: (params) => {
+              const raw = params.tag;
+              if (raw == null || raw === "") return "";
+              const arr = Array.isArray(raw) ? raw : [raw];
+              return arr
+                .map((t) => `tag=${encodeURIComponent(String(t))}`)
+                .join("&");
+            },
+          },
         });
         setPlaces(response.data.data.places);
       } catch (err) {
@@ -34,74 +43,8 @@ const PlaceList = (props) => {
   );
 
   useEffect(() => {
-    loadPlaces("");
-  }, [loadPlaces]);
-
-  // Prevent body scroll when modal is open
-  useEffect(() => {
-    if (showDeleteModal) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [showDeleteModal]);
-
-  const handleDelete = (e, place) => {
-    // e.stopPropagation means when we click Delete button we are not going to send that Event up to the Table row.
-    // it doesnt hit the useNavigate function.
-    e.stopPropagation();
-    setPlaceToDelete(place);
-    setShowDeleteModal(true);
-  };
-
-  const confirmDelete = async (e) => {
-    if (e) {
-      e.stopPropagation();
-      e.preventDefault();
-    }
-    if (!placeToDelete) return;
-    
-    try {
-      const response = await PlaceFinder.delete(`/${placeToDelete.id}`);
-      setPlaces(
-        places.filter((place) => {
-          return place.id !== placeToDelete.id;
-        })
-      );
-      setShowDeleteModal(false);
-      setPlaceToDelete(null);
-    } catch (err) {
-      console.error("Error deleting place:", err);
-      setShowDeleteModal(false);
-      setPlaceToDelete(null);
-    }
-  };
-
-  const cancelDelete = (e) => {
-    if (e) {
-      e.stopPropagation();
-      e.preventDefault();
-    }
-    setShowDeleteModal(false);
-    setPlaceToDelete(null);
-  };
-
-  const handleUpdate = (e, place) => {
-    // e.stopPropagation means when we click Update button we are not going to send that Event up to the Table row.
-    // it doesnt hit the useNavigate function.
-    e.stopPropagation();
-    setPlaceToUpdate(place.id);
-    setShowUpdateModal(true);
-  };
-
-  const handleCloseUpdateModal = () => {
-    setShowUpdateModal(false);
-    setPlaceToUpdate(null);
-  };
+    loadPlaces(activeFilterTags);
+  }, [activeFilterTags, loadPlaces]);
 
   const handlePlaceSelect = (id) => {
     navigate(`/places/${id}`);
@@ -136,8 +79,15 @@ const PlaceList = (props) => {
           bValue = (b.location || '').toLowerCase();
           break;
         case 'price_range':
-          aValue = a.price_range || 0;
-          bValue = b.price_range || 0;
+          // Null / N/A sorts after $–$$$$$ when ascending
+          aValue =
+            a.price_range != null && a.price_range !== ""
+              ? Number(a.price_range)
+              : Number.POSITIVE_INFINITY;
+          bValue =
+            b.price_range != null && b.price_range !== ""
+              ? Number(b.price_range)
+              : Number.POSITIVE_INFINITY;
           break;
         case 'ratings':
           // Sort by average rating (null/undefined treated as 0 for places with no reviews)
@@ -161,255 +111,191 @@ const PlaceList = (props) => {
     });
   }, [places, sortColumn, sortDirection]);
 
+  const sortLabels = {
+    name: "Name",
+    location: "Location",
+    price_range: "Price",
+    ratings: "Rating",
+  };
+
   const getSortIcon = (column) => {
     if (sortColumn !== column) {
-      return <span className="ms-2" style={{ color: '#ffc857', opacity: 0.6 }}>↕️</span>;
+      return <span className="place-tiles-sort-icon" aria-hidden>↕</span>;
     }
-    return sortDirection === 'asc' 
-      ? <span className="ms-2" style={{ color: '#ffc857' }}>↑</span>
-      : <span className="ms-2" style={{ color: '#ffc857' }}>↓</span>;
+    return (
+      <span className="place-tiles-sort-icon place-tiles-sort-icon--active" aria-hidden>
+        {sortDirection === "asc" ? "↑" : "↓"}
+      </span>
+    );
   };
 
   const renderRating = (place) => {
     if (!place.count) {
-      return <span className="ml-1" style={{ color: '#ffc857' }}>0 reviews</span>
+      return <span style={{ color: "var(--text-muted)" }}>No reviews yet</span>;
     }
+    const parsed =
+      place.average_rating != null ? parseFloat(place.average_rating) : 0;
+    const avg = Number.isFinite(parsed) ? parsed : 0;
     return (
       <>
-        <StarRating rating={place.id} />
-        <span className="ml-1" style={{ color: '#ffc857' }}>({place.count})</span>
+        <StarRating rating={avg} />
+        <span style={{ color: "var(--text-muted)" }}>({place.count})</span>
       </>
     );
   };
 
   return (
     <>
-      <div className="px-2 mb-3">
-        <label className="form-label mb-1" htmlFor="place-list-tag-filter">
-          <i className="fas fa-search me-2"></i>
-          Search places by tag
-        </label>
-        <div className="d-flex flex-wrap align-items-start gap-2">
-          <div style={{ flex: "1 1 280px", maxWidth: "440px" }}>
-            <TagInput
-              id="place-list-tag-filter"
-              placeholder="e.g. coffee — press Enter to filter"
-              showHint={false}
-              onSubmitName={async (name) => {
-                await loadPlaces(name);
-                setActiveTagFilter(name);
-              }}
-            />
-          </div>
-          {activeTagFilter ? (
-            <button
-              type="button"
-              className="btn btn-modern btn-secondary-modern align-self-center"
-              onClick={async () => {
-                setActiveTagFilter("");
-                await loadPlaces("");
-              }}
-            >
-              <i className="fas fa-times me-2"></i>
-              Clear filter
-            </button>
-          ) : null}
-        </div>
-        {activeTagFilter ? (
-          <p className="text-muted small mb-0 mt-2">
-            Showing places with a tag matching &quot;{activeTagFilter}&quot;
-          </p>
-        ) : null}
-      </div>
       <div className="modern-table-container">
-        <table className="modern-table align-middle">
-          <thead>
-            <tr>
-              <th 
-                scope="col"
-                style={{ cursor: 'pointer', userSelect: 'none' }}
-                onClick={(e) => handleSortClick(e, 'name')}
+        <div className="place-tiles-toolbar">
+          <div
+            className="place-tiles-sort-bar"
+            role="toolbar"
+            aria-label="Sort and filter places"
+          >
+            <span className="place-tiles-sort-label">Sort by</span>
+            {["name", "location", "price_range", "ratings"].map((column) => (
+              <button
+                key={column}
+                type="button"
+                className={`place-tiles-sort-btn${sortColumn === column ? " is-active" : ""}`}
+                onClick={(e) => handleSortClick(e, column)}
               >
-                <i className="fas fa-store me-2"></i>
-                Place {getSortIcon('name')}
-              </th>
-              <th 
-                scope="col"
-                style={{ cursor: 'pointer', userSelect: 'none' }}
-                onClick={(e) => handleSortClick(e, 'location')}
+                {sortLabels[column]}
+                {getSortIcon(column)}
+              </button>
+            ))}
+            <span
+              className="place-tiles-sort-label place-tiles-filter-section-start"
+              id="place-list-filter-heading"
+            >
+              Filter By Tag(s)
+            </span>
+            <div className="place-tiles-filter-input-wrap">
+              <TagInput
+                id="place-list-tag-filter"
+                placeholder="Add tag, press Enter"
+                showHint={false}
+                aria-labelledby="place-list-filter-heading"
+                aria-describedby="place-list-filter-desc"
+                onSubmitName={async (name) => {
+                  const trimmed = String(name).trim();
+                  if (!trimmed) return;
+                  setActiveFilterTags((prev) => {
+                    if (
+                      prev.some(
+                        (t) => t.toLowerCase() === trimmed.toLowerCase()
+                      )
+                    ) {
+                      return prev;
+                    }
+                    return [...prev, trimmed];
+                  });
+                }}
+              />
+            </div>
+            {activeFilterTags.map((tag) => (
+              <span
+                key={tag}
+                className="place-tiles-tag-filter-pill"
               >
-                <i className="fas fa-map-marker-alt me-2"></i>
-                Location {getSortIcon('location')}
-              </th>
-              <th 
-                scope="col"
-                style={{ cursor: 'pointer', userSelect: 'none' }}
-                onClick={(e) => handleSortClick(e, 'price_range')}
-              >
-                <i className="fas fa-dollar-sign me-2"></i>
-                Price Range {getSortIcon('price_range')}
-              </th>
-              <th scope="col">
-                <i className="fas fa-tags me-2"></i>
-                Tags
-              </th>
-              <th 
-                scope="col"
-                style={{ cursor: 'pointer', userSelect: 'none' }}
-                onClick={(e) => handleSortClick(e, 'ratings')}
-              >
-                <i className="fas fa-star me-2"></i>
-                Ratings {getSortIcon('ratings')}
-              </th>
-              <th scope="col">
-                <i className="fas fa-edit me-2"></i>
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {sortedPlaces &&
-              sortedPlaces.map((place) => {
-                const tags = normalizeTags(place.tags);
-                return (
-                  <tr
+                <span className="place-tiles-tag-filter-pill-text">{tag}</span>
+                <button
+                  type="button"
+                  className="place-tiles-tag-filter-pill-remove"
+                  title={`Remove filter “${tag}”`}
+                  aria-label={`Remove tag filter ${tag}`}
+                  onClick={() =>
+                    setActiveFilterTags((prev) =>
+                      prev.filter((t) => t !== tag)
+                    )
+                  }
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+          <p
+            id="place-list-filter-desc"
+            className={`place-tiles-filter-hint text-muted small mb-0${activeFilterTags.length === 0 ? " visually-hidden" : ""}`}
+          >
+            {activeFilterTags.length > 0 ? (
+              <>
+                Showing places that match <strong>all</strong> of these tags:{" "}
+                <span className="text-body">
+                  {activeFilterTags.map((t) => `"${t}"`).join(", ")}
+                </span>
+              </>
+            ) : (
+              <>
+                Add tags with Enter. A place must match every selected tag
+                (partial name match). Remove a tag with the pill ×.
+              </>
+            )}
+          </p>
+        </div>
+        <div className="place-tiles-grid">
+          {sortedPlaces && sortedPlaces.length === 0 ? (
+            <p className="place-tiles-empty text-muted mb-0">No places to show.</p>
+          ) : null}
+          {sortedPlaces &&
+            sortedPlaces.map((place) => {
+              const tags = normalizeTags(place.tags);
+              const priceLabel = formatPriceRangeDollars(place.price_range);
+              return (
+                <article className="place-tile" key={place.id}>
+                  <div
+                    className="place-tile-main"
                     onClick={() => handlePlaceSelect(place.id)}
-                    key={place.id}
+                    role="link"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handlePlaceSelect(place.id);
+                      }
+                    }}
                   >
-                    <td><strong>{place.name}</strong></td>
-                    <td>
-                      <i className="fas fa-map-marker-alt me-2" style={{ color: '#ffc857' }}></i>
-                      {place.location}
-                    </td>
-                    <td>
-                      <span className="price-range">{"$".repeat(place.price_range)}</span>
-                    </td>
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <div className="d-flex flex-wrap gap-1">
-                        {tags.length === 0 ? (
-                          <span className="text-muted small">—</span>
-                        ) : (
-                          tags.map((t) => (
-                            <span
-                              key={t.id}
-                              className="badge rounded-pill"
-                              style={{
-                                background: "rgba(255, 200, 87, 0.2)",
-                                color: "#ffc857",
-                                fontWeight: 500,
-                              }}
-                            >
-                              {t.name}
-                            </span>
-                          ))
-                        )}
-                      </div>
-                    </td>
-                    <td className="rating-display">{renderRating(place)}</td>
-                    <td>
-                      <div className="d-flex gap-2">
-                        <button
-                          onClick={(e) => handleUpdate(e, place)}
-                          className="btn btn-modern btn-warning-modern"
-                          title="Update"
-                        >
-                          <i className="fas fa-edit"></i>
-                        </button>
-                        <button
-                          onClick={(e) => handleDelete(e, place)}
-                          className="btn btn-modern btn-danger-modern"
-                          title="Delete"
-                        >
-                          <i className="fas fa-trash"></i>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-          </tbody>
-        </table>
+                    <h3 className="place-tile-name">{place.name}</h3>
+                    {priceLabel ? (
+                      <p className="place-tile-price-range mb-0">{priceLabel}</p>
+                    ) : null}
+                    <p className="place-tile-location">
+                      <i
+                        className="fas fa-map-marker-alt place-tile-location-icon"
+                        aria-hidden
+                      />
+                      <span>{place.location}</span>
+                    </p>
+                    <div
+                      className="place-tile-tags"
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    >
+                      {tags.length === 0 ? (
+                        <span className="text-muted small">No tags</span>
+                      ) : (
+                        tags.map((t) => (
+                          <span
+                            key={t.id}
+                            className="place-tile-tag badge rounded-pill"
+                          >
+                            {t.name}
+                          </span>
+                        ))
+                      )}
+                    </div>
+                    <div className="place-tile-rating rating-display">
+                      {renderRating(place)}
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+        </div>
       </div>
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <>
-          <div
-            className="modal-backdrop show"
-            onClick={cancelDelete}
-            style={{ opacity: 0.5, zIndex: 1040 }}
-          ></div>
-          <div
-            className="modal show modern-modal"
-            style={{ display: "block", zIndex: 1050 }}
-            tabIndex="-1"
-            role="dialog"
-            onClick={(e) => {
-              // Only close if clicking directly on the modal container (not on modal-dialog or modal-content)
-              if (e.target.classList.contains('modal')) {
-                cancelDelete(e);
-              }
-            }}
-          >
-            <div 
-              className="modal-dialog modal-dialog-centered" 
-              role="document"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                <div className="modal-header">
-                  <h5 className="modal-title">
-                    <i className="fas fa-exclamation-triangle me-2"></i>
-                    Confirm Delete
-                  </h5>
-                  <button
-                    type="button"
-                    className="btn-close btn-close-white"
-                    onClick={cancelDelete}
-                    aria-label="Close"
-                  ></button>
-                </div>
-                <div className="modal-body">
-                  <p>
-                    Are you sure you want to delete{" "}
-                    <strong>{placeToDelete?.name}</strong>?
-                  </p>
-                  <p className="text-danger">
-                    <i className="fas fa-info-circle me-2"></i>
-                    This will permanently delete the place and all its associated reviews.
-                    This action cannot be undone.
-                  </p>
-                </div>
-                <div className="modal-footer">
-                  <button
-                    type="button"
-                    className="btn btn-modern btn-secondary-modern"
-                    onClick={cancelDelete}
-                  >
-                    <i className="fas fa-times me-2"></i>
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-modern btn-danger-modern"
-                    onClick={confirmDelete}
-                  >
-                    <i className="fas fa-trash me-2"></i>
-                    Delete
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* Update Place Modal */}
-      <UpdatePlace
-        showModal={showUpdateModal}
-        onClose={handleCloseUpdateModal}
-        placeId={placeToUpdate}
-      />
     </>
   );
 };

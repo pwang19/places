@@ -15,7 +15,7 @@ const PLACE_FROM_REVIEWS = `
   ) reviews ON p.id = reviews.place_id
 `;
 
-const placeSelectSql = `SELECT p.id, p.name, p.location, p.price_range,
+const placeSelectSql = `SELECT p.id, p.name, p.location, p.price_range, p.notes,
   reviews.count,
   reviews.average_rating,
   ${tagsJsonSelect("p")}
@@ -26,16 +26,23 @@ async function fetchPlaceRowById(id) {
   return place.rows[0] || null;
 }
 
-async function listPlaceRows(tagFilter) {
-  const tag = (tagFilter || "").trim();
-  const whereClause = tag
-    ? `WHERE EXISTS (
-        SELECT 1 FROM place_tags ptf
-        JOIN tags tf ON tf.id = ptf.tag_id
-        WHERE ptf.place_id = p.id AND tf.name ILIKE $1
-      )`
-    : "";
-  const params = tag ? [`%${tag}%`] : [];
+async function listPlaceRows(tagFilters) {
+  const cleaned = (Array.isArray(tagFilters) ? tagFilters : [])
+    .map((t) => String(t).trim())
+    .filter(Boolean);
+  if (cleaned.length === 0) {
+    const result = await db.query(placeSelectSql);
+    return result.rows;
+  }
+  const existsClauses = cleaned.map(
+    (_, i) => `EXISTS (
+      SELECT 1 FROM place_tags ptf
+      JOIN tags tf ON tf.id = ptf.tag_id
+      WHERE ptf.place_id = p.id AND tf.name ILIKE $${i + 1}
+    )`
+  );
+  const whereClause = `WHERE ${existsClauses.join(" AND ")}`;
+  const params = cleaned.map((t) => `%${t}%`);
   const result = await db.query(`${placeSelectSql} ${whereClause}`, params);
   return result.rows;
 }

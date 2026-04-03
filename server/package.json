@@ -9,7 +9,9 @@
     "createReviewsTable": "node db/createReviewsTable.js",
     "addCascadeConstraint": "node db/addCascadeConstraint.js",
     "createTagsTables": "node db/createTagsTables.js",
-    "migrateToPlaces": "node db/migrateToPlaces.js"
+    "migrateToPlaces": "node db/migrateToPlaces.js",
+    "addPlaceNotesColumn": "node db/addPlaceNotesColumn.js",
+    "allowNullPriceRange": "node db/allowNullPriceRange.js"
   },
   "keywords": [],
   "author": "",

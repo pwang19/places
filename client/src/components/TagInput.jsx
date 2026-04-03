@@ -14,6 +14,8 @@ const TagInput = ({
   disabled = false,
   className = "",
   showHint = true,
+  ariaLabelledby,
+  ariaDescribedby,
 }) => {
   const [value, setValue] = useState("");
   const [suggestions, setSuggestions] = useState([]);
@@ -131,6 +133,8 @@ const TagInput = ({
         aria-autocomplete="list"
         aria-expanded={open}
         aria-controls={id ? `${id}-tag-suggestions` : undefined}
+        aria-labelledby={ariaLabelledby || undefined}
+        aria-describedby={ariaDescribedby || undefined}
       />
       {open && suggestions.length > 0 && (
         <ul

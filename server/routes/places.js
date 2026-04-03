@@ -5,10 +5,43 @@ const asyncHandler = require("../middleware/asyncHandler");
 
 const router = express.Router();
 
+function normalizeNotes(body) {
+  if (!body || body.notes == null) return null;
+  const s = String(body.notes).trim();
+  return s.length ? s : null;
+}
+
+function normalizePriceRange(body) {
+  if (
+    !body ||
+    body.price_range === undefined ||
+    body.price_range === null ||
+    body.price_range === ""
+  ) {
+    return null;
+  }
+  const n = Number(body.price_range);
+  if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1 || n > 5) {
+    const err = new Error(
+      "price_range must be an integer from 1 to 5, or omitted for not applicable"
+    );
+    err.status = 400;
+    throw err;
+  }
+  return n;
+}
+
+function normalizeTagQuery(query) {
+  const raw = query.tag;
+  if (raw == null || raw === "") return [];
+  const list = Array.isArray(raw) ? raw : [raw];
+  return list.map((t) => String(t).trim()).filter(Boolean);
+}
+
 router.get(
   "/",
   asyncHandler(async (req, res) => {
-    const rows = await listPlaceRows(req.query.tag);
+    const rows = await listPlaceRows(normalizeTagQuery(req.query));
     res.status(200).json({
       status: "Success",
       results: rows.length,
@@ -21,8 +54,13 @@ router.post(
   "/",
   asyncHandler(async (req, res) => {
     const results = await db.query(
-      "INSERT INTO places (name, location, price_range) VALUES ($1, $2, $3) RETURNING id",
-      [req.body.name, req.body.location, req.body.price_range]
+      "INSERT INTO places (name, location, price_range, notes) VALUES ($1, $2, $3, $4) RETURNING id",
+      [
+        req.body.name,
+        req.body.location,
+        normalizePriceRange(req.body),
+        normalizeNotes(req.body),
+      ]
     );
     const placeRow = await fetchPlaceRowById(results.rows[0].id);
     res.status(201).json({
@@ -60,8 +98,14 @@ router.put(
   "/:id",
   asyncHandler(async (req, res) => {
     const results = await db.query(
-      "UPDATE places SET name = $1, location = $2, price_range = $3 WHERE id = $4 RETURNING id",
-      [req.body.name, req.body.location, req.body.price_range, req.params.id]
+      "UPDATE places SET name = $1, location = $2, price_range = $3, notes = $4 WHERE id = $5 RETURNING id",
+      [
+        req.body.name,
+        req.body.location,
+        normalizePriceRange(req.body),
+        normalizeNotes(req.body),
+        req.params.id,
+      ]
     );
     if (results.rowCount === 0) {
       return res.status(404).json({ status: "Error", message: "Place not found" });

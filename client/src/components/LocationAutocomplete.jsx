@@ -180,10 +180,11 @@ const LocationAutocomplete = ({ value, onChange, id, placeholder, required }) =>
               }`}
               style={{
                 backgroundColor:
+                  index === selectedIndex ? "var(--primary)" : "var(--surface)",
+                color:
                   index === selectedIndex
-                    ? "var(--color-teal)"
-                    : "rgba(255, 255, 250, 0.1)",
-                color: "var(--text-primary)",
+                    ? "var(--text-on-primary)"
+                    : "var(--text-primary)",
                 border: "none",
                 borderBottom:
                   index < suggestions.length - 1
@@ -202,8 +203,11 @@ const LocationAutocomplete = ({ value, onChange, id, placeholder, required }) =>
               <div
                 style={{
                   fontSize: "0.85rem",
-                  color: "var(--text-secondary)",
-                  opacity: 0.8,
+                  color:
+                    index === selectedIndex
+                      ? "rgba(255, 255, 255, 0.9)"
+                      : "var(--text-muted)",
+                  opacity: index === selectedIndex ? 1 : 0.9,
                 }}
               >
                 {suggestion.place_name}
