@@ -6,89 +6,103 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { API_BASE_URL } from "../config/api";
+import { isSupabaseConfigured, supabase } from "../lib/supabaseClient";
 
 const AuthContext = createContext(null);
 
-async function fetchMe(signal) {
-  const res = await fetch(`${API_BASE_URL}/auth/me`, {
-    credentials: "include",
-    signal,
-  });
-  if (res.status === 401) return null;
-  if (!res.ok) {
-    const err = new Error("Failed to verify session");
-    err.status = res.status;
-    throw err;
-  }
-  const body = await res.json();
-  return body.data && body.data.user ? body.data.user : null;
+function mapSupabaseUser(u) {
+  if (!u) return null;
+  return {
+    sub: u.id,
+    email: u.email,
+    name: u.user_metadata?.full_name || u.user_metadata?.name,
+  };
+}
+
+function allowedEmailDomain() {
+  return (process.env.REACT_APP_ALLOWED_EMAIL_DOMAIN || "acts2.network").toLowerCase();
+}
+
+function isAllowedDomain(email) {
+  if (!email || typeof email !== "string") return false;
+  const domain = allowedEmailDomain();
+  return email.toLowerCase().endsWith(`@${domain}`);
 }
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(undefined);
   const [meError, setMeError] = useState(null);
 
-  const refresh = useCallback(async () => {
-    setMeError(null);
-    try {
-      const u = await fetchMe();
-      setUser(u);
-    } catch (e) {
-      setMeError(e.message || "Could not reach server");
+  useEffect(() => {
+    if (!isSupabaseConfigured() || !supabase) {
       setUser(null);
+      setMeError(
+        "Missing Supabase env: set REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_ANON_KEY."
+      );
+      return;
     }
+
+    let cancelled = false;
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (cancelled) return;
+      if (error) {
+        setMeError(error.message);
+        setUser(null);
+        return;
+      }
+      setUser(session ? mapSupabaseUser(session.user) : null);
+    });
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (cancelled) return;
+      setUser(session ? mapSupabaseUser(session.user) : null);
+    });
+
+    return () => {
+      cancelled = true;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
-  useEffect(() => {
-    const ac = new AbortController();
-    (async () => {
-      try {
-        const u = await fetchMe(ac.signal);
-        if (!ac.signal.aborted) setUser(u);
-      } catch (e) {
-        if (e.name === "AbortError") return;
-        if (!ac.signal.aborted) {
-          setMeError(e.message || "Could not reach server");
-          setUser(null);
-        }
-      }
-    })();
-    return () => ac.abort();
+  const refresh = useCallback(async () => {
+    if (!supabase) return;
+    setMeError(null);
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) throw error;
+      setUser(session ? mapSupabaseUser(session.user) : null);
+    } catch (e) {
+      setMeError(e.message || "Could not verify session");
+      setUser(null);
+    }
   }, []);
 
   const loginWithCredential = useCallback(async (credential) => {
-    setMeError(null);
-    const res = await fetch(`${API_BASE_URL}/auth/google`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ credential }),
-    });
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      const msg =
-        (body && body.message) ||
-        (res.status === 403
-          ? "This account is not allowed to sign in"
-          : "Sign-in failed");
-      throw new Error(msg);
+    if (!supabase) {
+      throw new Error("Supabase is not configured");
     }
-    const u = body.data && body.data.user;
-    if (u) setUser(u);
-    else await refresh();
-  }, [refresh]);
+    setMeError(null);
+    const { data, error } = await supabase.auth.signInWithIdToken({
+      provider: "google",
+      token: credential,
+    });
+    if (error) {
+      throw new Error(error.message || "Sign-in failed");
+    }
+    const u = data.user || data.session?.user;
+    const email = u?.email;
+    if (!isAllowedDomain(email)) {
+      await supabase.auth.signOut();
+      throw new Error(`Only @${allowedEmailDomain()} accounts may sign in`);
+    }
+    setUser(mapSupabaseUser(u));
+  }, []);
 
   const logout = useCallback(async () => {
+    if (!supabase) return;
     setMeError(null);
-    try {
-      await fetch(`${API_BASE_URL}/auth/logout`, {
-        method: "POST",
-        credentials: "include",
-      });
-    } finally {
-      setUser(null);
-    }
+    await supabase.auth.signOut();
+    setUser(null);
   }, []);
 
   const value = useMemo(

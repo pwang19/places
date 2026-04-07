@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon server.js",
+    "start": "node server.js",
+    "dev": "nodemon server.js",
     "createPlacesTable": "node db/createPlacesTable.js",
     "createReviewsTable": "node db/createReviewsTable.js",
     "addCascadeConstraint": "node db/addCascadeConstraint.js",
@@ -26,7 +27,9 @@
     "google-auth-library": "^10.6.2",
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.10.0",
-    "nodemon": "^2.0.22",
     "pg": "^8.11.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
   }
 }

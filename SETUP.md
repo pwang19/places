@@ -1,4 +1,6 @@
-# Quick Start Guide
+# Quick Start Guide (legacy Express + Postgres)
+
+For the **default** app (Supabase + Cloudflare Pages), use [SUPABASE.md](SUPABASE.md) instead. This guide is for running the **optional** `server/` Express API against your own Postgres.
 
 ## Prerequisites
 - Node.js and npm installed
@@ -47,9 +49,9 @@ npm run migrateToPlaces
 ### 4. Start the Backend Server
 ```bash
 cd server
-npm start
+npm run dev
 ```
-The server will run on `http://localhost:5001` unless you change `PORT` in `server/.env`.
+Use `npm start` for production (runs `node` without the file watcher). The server listens on `http://localhost:5001` unless you change `PORT` in `server/.env`.
 
 ### 5. Start the Frontend (in a new terminal)
 ```bash

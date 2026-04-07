@@ -10,14 +10,21 @@ export default function LoginScreen() {
   const { loginWithCredential, meError } = useAuth();
   const [loginError, setLoginError] = useState(null);
 
-  if (!GOOGLE_CLIENT_ID) {
+  const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || "";
+  const supabaseAnon = process.env.REACT_APP_SUPABASE_ANON_KEY || "";
+
+  if (!GOOGLE_CLIENT_ID || !supabaseUrl || !supabaseAnon) {
     return (
       <div className="auth-gate">
         <div className="auth-card">
           <h1 className="auth-title">Places</h1>
           <p className="auth-message auth-message--error">
-            Missing <code>REACT_APP_GOOGLE_CLIENT_ID</code>. Add it to{" "}
-            <code>client/.env</code> and restart the dev server.
+            Missing environment variables. Add to <code>client/.env</code> and
+            restart the dev server:
+            <br />
+            <code>REACT_APP_GOOGLE_CLIENT_ID</code>,{" "}
+            <code>REACT_APP_SUPABASE_URL</code>,{" "}
+            <code>REACT_APP_SUPABASE_ANON_KEY</code>.
           </p>
         </div>
       </div>

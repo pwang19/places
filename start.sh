@@ -1,15 +1,11 @@
 #!/usr/bin/env bash
-# Start the API (server) and React app (client) together.
+# Start the React client. Data and auth come from Supabase (see SUPABASE.md).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SERVER_PID=""
 CLIENT_PID=""
 
 cleanup() {
-  if [[ -n "${SERVER_PID}" ]] && kill -0 "${SERVER_PID}" 2>/dev/null; then
-    kill "${SERVER_PID}" 2>/dev/null || true
-  fi
   if [[ -n "${CLIENT_PID}" ]] && kill -0 "${CLIENT_PID}" 2>/dev/null; then
     kill "${CLIENT_PID}" 2>/dev/null || true
   fi
@@ -22,19 +18,13 @@ command -v npm >/dev/null 2>&1 || {
   exit 1
 }
 
-echo "Starting server (default http://localhost:5001 — set PORT in server/.env) and client (http://localhost:3000)..."
-if [[ ! -f "${ROOT}/server/.env" ]]; then
-  echo "Note: server/.env is missing. Copy server/.env.example and set GOOGLE_CLIENT_ID, SESSION_SECRET, and CLIENT_ORIGIN." >&2
-elif ! grep -q '^[[:space:]]*GOOGLE_CLIENT_ID=[^[:space:]]' "${ROOT}/server/.env" 2>/dev/null; then
-  echo "Note: GOOGLE_CLIENT_ID is not set in server/.env — Google sign-in will fail until you add it (same value as REACT_APP_GOOGLE_CLIENT_ID)." >&2
+echo "Starting client at http://localhost:3000 (Supabase: set REACT_APP_SUPABASE_* in client/.env)."
+if [[ ! -f "${ROOT}/client/.env" ]]; then
+  echo "Note: client/.env is missing. Copy client/.env.example and set Supabase + Google vars." >&2
 fi
-echo "Press Ctrl+C to stop both."
-
-(cd "${ROOT}/server" && npm start) &
-SERVER_PID=$!
+echo "Press Ctrl+C to stop."
 
 (cd "${ROOT}/client" && npm start) &
 CLIENT_PID=$!
 
-# Block until both dev servers exit. Ctrl+C runs cleanup and stops both.
 wait

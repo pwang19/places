@@ -1,0 +1,6 @@
+# Link with: supabase link --project-ref <your-ref>
+# Apply SQL: supabase db push
+# Deploy function: supabase functions deploy private-note --no-verify-jwt  # omit --no-verify-jwt to enforce JWT at gateway
+
+[functions.private-note]
+verify_jwt = true
