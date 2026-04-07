@@ -113,6 +113,7 @@ const TagInput = ({
       <input
         id={id}
         type="text"
+        role="combobox"
         className="form-control"
         autoComplete="off"
         placeholder={placeholder}
@@ -131,6 +132,7 @@ const TagInput = ({
           setTimeout(() => setOpen(false), 150);
         }}
         aria-autocomplete="list"
+        aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={id ? `${id}-tag-suggestions` : undefined}
         aria-labelledby={ariaLabelledby || undefined}
