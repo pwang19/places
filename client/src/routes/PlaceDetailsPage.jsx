@@ -211,6 +211,15 @@ const PlaceDetailsPage = () => {
                   </p>
                 </div>
               ) : null}
+              <p className="place-details-public-lists-count text-muted small mb-0 mt-3 text-start w-100">
+                {(() => {
+                  const n = Number(selectedPlace.place.public_list_count);
+                  const c = Number.isFinite(n) ? n : 0;
+                  return c === 1
+                    ? "Added to 1 public list"
+                    : `Added to ${c} public list(s)`;
+                })()}
+              </p>
               {!reviewsDisabled ? (
                 <div className="rating-display justify-content-center">
                   <StarRating rating={selectedPlace.place.average_rating} />

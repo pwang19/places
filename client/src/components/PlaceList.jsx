@@ -13,6 +13,7 @@ import StarRating from "../components/StarRating";
 import TagInput from "../components/TagInput";
 import { normalizeTags } from "../utils/tags";
 import { formatPriceRangeDollars } from "../utils/priceRange";
+import { setPlaceDragData } from "../utils/placeDrag";
 
 const PlaceList = (props) => {
   const { places, setPlaces } = useContext(PlacesContext);
@@ -360,6 +361,27 @@ const PlaceList = (props) => {
                   className={`place-tile${hasNotes ? " place-tile--has-notes" : ""}`}
                   key={place.id}
                 >
+                  <button
+                    type="button"
+                    className="place-tile-drag-handle"
+                    draggable
+                    title="Drag into list (left)"
+                    aria-label={`Drag ${place.name || "place"} to add to a list`}
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                    onDragStart={(e) => {
+                      e.stopPropagation();
+                      setPlaceDragData(e.dataTransfer, {
+                        id: place.id,
+                        name: place.name,
+                        location: place.location,
+                        price_range: place.price_range ?? null,
+                      });
+                      e.dataTransfer.effectAllowed = "copy";
+                    }}
+                  >
+                    <i className="fas fa-grip-vertical" aria-hidden />
+                  </button>
                   <div
                     className="place-tile-main"
                     onClick={() => handlePlaceSelect(place.id)}

@@ -596,6 +596,130 @@ body {
   transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
 }
 
+.place-tile-drag-handle {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  z-index: 4;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 8px;
+  background: var(--surface-muted);
+  color: var(--text-muted);
+  cursor: grab;
+  line-height: 1;
+}
+
+.place-tile-drag-handle:hover {
+  color: var(--primary);
+  background: var(--surface-hover);
+}
+
+.place-tile-drag-handle:active {
+  cursor: grabbing;
+}
+
+/* Home: list workbench + place grid */
+.home-lists-main-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 1.25rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 0 2rem;
+  /* Isolate flex children so z-index on columns controls paint order */
+  isolation: isolate;
+}
+
+.home-place-list-wrap {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  /* Below .place-list-workbench so modals rendered in the sidebar stack above the grid */
+  z-index: 0;
+}
+
+.place-list-workbench {
+  flex: 0 0 280px;
+  max-width: 100%;
+  position: sticky;
+  top: 1rem;
+  align-self: flex-start;
+  z-index: 2;
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+  padding: 1rem 1rem 1.1rem;
+}
+
+.place-list-workbench-title {
+  color: var(--text-heading);
+  font-weight: 700;
+}
+
+.place-list-workbench-dropzone {
+  min-height: 140px;
+  border: 2px dashed var(--border-color);
+  border-radius: 12px;
+  padding: 0.75rem;
+  background: var(--surface-muted);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.place-list-workbench-dropzone:focus-within,
+.place-list-workbench-dropzone:hover {
+  border-color: var(--primary-hover);
+}
+
+.place-list-workbench-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.place-list-workbench-item-inner {
+  display: flex;
+  align-items: center;
+  padding: 0.35rem 0.5rem;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  font-size: 0.875rem;
+  cursor: grab;
+}
+
+.place-list-workbench-item-inner--readonly {
+  cursor: default;
+}
+
+.place-list-workbench-item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.place-list-modal.modal {
+  z-index: 10050;
+}
+
+/* Dialog before backdrop in DOM; give it a higher z-index so content stays clickable */
+.place-list-modal .modal-dialog {
+  position: relative;
+  z-index: 10060;
+}
+
+.place-list-modal .modal-backdrop {
+  z-index: 10040;
+}
+
 /* Let notes tooltip extend above the card without clipping */
 .place-tile--has-notes {
   overflow: visible;
@@ -976,6 +1100,18 @@ body {
   .modern-table thead th,
   .modern-table tbody td {
     padding: 0.75rem 0.5rem;
+  }
+
+  .home-lists-main-row {
+    flex-direction: column;
+    padding-bottom: 1.5rem;
+  }
+
+  .place-list-workbench {
+    flex: none;
+    width: 100%;
+    position: relative;
+    top: auto;
   }
 
   .place-tiles-grid {
