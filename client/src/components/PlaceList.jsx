@@ -6,7 +6,7 @@ import React, {
   useCallback,
   useRef,
 } from "react";
-import PlaceFinder from "../apis/PlaceFinder.js";
+import PlaceFinder, { listPlaceListsPicker } from "../apis/placesApi.js";
 import { PlacesContext } from "../context/PlacesContext";
 import { useNavigate } from "react-router-dom";
 import StarRating from "../components/StarRating";
@@ -21,28 +21,43 @@ const PlaceList = (props) => {
   const [sortColumn, setSortColumn] = useState(null);
   const [sortDirection, setSortDirection] = useState('asc'); // 'asc' or 'desc'
   const [activeFilterTags, setActiveFilterTags] = useState([]);
+  const [activeListIds, setActiveListIds] = useState([]);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [placeLists, setPlaceLists] = useState([]);
   const [nameSearchOpen, setNameSearchOpen] = useState(false);
   const [nameSearchInput, setNameSearchInput] = useState("");
   const [nameSearchApplied, setNameSearchApplied] = useState("");
   const nameSearchInputRef = useRef(null);
+  const filtersWrapRef = useRef(null);
 
   const loadPlaces = useCallback(
-    async (tagsArray) => {
+    async (tagsArray, listIdsArray) => {
       try {
-        const list = Array.isArray(tagsArray) ? tagsArray : [];
+        const tagList = Array.isArray(tagsArray) ? tagsArray : [];
+        const listList = Array.isArray(listIdsArray) ? listIdsArray : [];
         const response = await PlaceFinder.get("/", {
-          params:
-            list.length > 0
-              ? { tag: list }
-              : {},
+          params: {
+            ...(tagList.length > 0 ? { tag: tagList } : {}),
+            ...(listList.length > 0 ? { list: listList } : {}),
+          },
           paramsSerializer: {
             serialize: (params) => {
-              const raw = params.tag;
-              if (raw == null || raw === "") return "";
-              const arr = Array.isArray(raw) ? raw : [raw];
-              return arr
-                .map((t) => `tag=${encodeURIComponent(String(t))}`)
-                .join("&");
+              const parts = [];
+              const rawTag = params.tag;
+              if (rawTag != null && rawTag !== "") {
+                const arr = Array.isArray(rawTag) ? rawTag : [rawTag];
+                arr.forEach((t) =>
+                  parts.push(`tag=${encodeURIComponent(String(t))}`)
+                );
+              }
+              const rawList = params.list;
+              if (rawList != null && rawList !== "") {
+                const arr = Array.isArray(rawList) ? rawList : [rawList];
+                arr.forEach((id) =>
+                  parts.push(`list=${encodeURIComponent(String(id))}`)
+                );
+              }
+              return parts.join("&");
             },
           },
         });
@@ -55,8 +70,69 @@ const PlaceList = (props) => {
   );
 
   useEffect(() => {
-    loadPlaces(activeFilterTags);
-  }, [activeFilterTags, loadPlaces]);
+    loadPlaces(activeFilterTags, activeListIds);
+  }, [activeFilterTags, activeListIds, loadPlaces]);
+
+  const refreshPlaceLists = useCallback(async () => {
+    try {
+      const rows = await listPlaceListsPicker();
+      setPlaceLists(Array.isArray(rows) ? rows : []);
+    } catch (err) {
+      console.log(err);
+      setPlaceLists([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshPlaceLists();
+  }, [refreshPlaceLists]);
+
+  useEffect(() => {
+    if (filtersOpen) {
+      refreshPlaceLists();
+    }
+  }, [filtersOpen, refreshPlaceLists]);
+
+  useEffect(() => {
+    if (!filtersOpen) return undefined;
+    const onPointerDown = (e) => {
+      if (
+        filtersWrapRef.current &&
+        !filtersWrapRef.current.contains(e.target)
+      ) {
+        setFiltersOpen(false);
+      }
+    };
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setFiltersOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [filtersOpen]);
+
+  const listNameById = useMemo(() => {
+    const m = new Map();
+    placeLists.forEach((row) => {
+      if (row && row.id != null) {
+        m.set(Number(row.id), String(row.name || "").trim() || `#${row.id}`);
+      }
+    });
+    return m;
+  }, [placeLists]);
+
+  const toggleListFilter = useCallback((listId) => {
+    setActiveListIds((prev) =>
+      prev.includes(listId)
+        ? prev.filter((x) => x !== listId)
+        : [...prev, listId]
+    );
+  }, []);
 
   const handlePlaceSelect = (id) => {
     navigate(`/places/${id}`);
@@ -168,7 +244,7 @@ const PlaceList = (props) => {
 
   return (
     <>
-      <div className="modern-table-container">
+      <div className="modern-table-container place-tiles-root">
         <div className="place-tiles-toolbar">
           <div
             className="place-tiles-sort-bar"
@@ -188,56 +264,149 @@ const PlaceList = (props) => {
                   {getSortIcon(column)}
                 </button>
               ))}
-              <span
-                className="place-tiles-sort-label place-tiles-filter-section-start"
-                id="place-list-filter-heading"
+              <div
+                className="place-tiles-filters-wrap place-tiles-filter-section-start"
+                ref={filtersWrapRef}
               >
-                Filter By Tag(s)
-              </span>
-              <div className="place-tiles-filter-input-wrap">
-                <TagInput
-                  id="place-list-tag-filter"
-                  placeholder="Add tag, press Enter"
-                  showHint={false}
-                  aria-labelledby="place-list-filter-heading"
-                  aria-describedby="place-list-filter-desc"
-                  onSubmitName={async (name) => {
-                    const trimmed = String(name).trim();
-                    if (!trimmed) return;
-                    setActiveFilterTags((prev) => {
-                      if (
-                        prev.some(
-                          (t) => t.toLowerCase() === trimmed.toLowerCase()
-                        )
-                      ) {
-                        return prev;
-                      }
-                      return [...prev, trimmed];
-                    });
-                  }}
-                />
-              </div>
-              {activeFilterTags.map((tag) => (
-                <span
-                  key={tag}
-                  className="place-tiles-tag-filter-pill"
+                <button
+                  type="button"
+                  className={`place-tiles-filters-trigger${activeFilterTags.length > 0 || activeListIds.length > 0 ? " has-active-filters" : ""}`}
+                  aria-expanded={filtersOpen}
+                  aria-haspopup="dialog"
+                  aria-controls="place-list-filters-panel"
+                  onClick={() => setFiltersOpen((open) => !open)}
                 >
-                  <span className="place-tiles-tag-filter-pill-text">{tag}</span>
-                  <button
-                    type="button"
-                    className="place-tiles-tag-filter-pill-remove"
-                    title={`Remove filter “${tag}”`}
-                    aria-label={`Remove tag filter ${tag}`}
-                    onClick={() =>
-                      setActiveFilterTags((prev) =>
-                        prev.filter((t) => t !== tag)
-                      )
-                    }
+                  <i className="fas fa-sliders-h" aria-hidden />
+                  <span>Filters</span>
+                  {activeFilterTags.length + activeListIds.length > 0 ? (
+                    <span className="place-tiles-filters-count">
+                      {activeFilterTags.length + activeListIds.length}
+                    </span>
+                  ) : null}
+                </button>
+                {filtersOpen ? (
+                  <div
+                    id="place-list-filters-panel"
+                    className="place-tiles-filters-panel"
+                    role="dialog"
+                    aria-label="Filter places by tags and lists"
                   >
-                    ×
-                  </button>
-                </span>
-              ))}
+                    <div className="place-tiles-filters-panel-body">
+                      <div className="place-tiles-filters-section">
+                        <h3
+                          className="place-tiles-filters-section-title"
+                          id="place-list-tags-heading"
+                        >
+                          Tags
+                        </h3>
+                        <p className="place-tiles-filters-section-hint small text-muted mb-2">
+                          A place must match <strong>all</strong> tags.
+                        </p>
+                        <div className="place-tiles-filter-input-wrap place-tiles-filter-input-wrap--panel">
+                          <TagInput
+                            id="place-list-tag-filter"
+                            placeholder="Add tag, press Enter"
+                            showHint={false}
+                            aria-labelledby="place-list-tags-heading"
+                            aria-describedby="place-list-filter-desc"
+                            onSubmitName={async (name) => {
+                              const trimmed = String(name).trim();
+                              if (!trimmed) return;
+                              setActiveFilterTags((prev) => {
+                                if (
+                                  prev.some(
+                                    (t) =>
+                                      t.toLowerCase() === trimmed.toLowerCase()
+                                  )
+                                ) {
+                                  return prev;
+                                }
+                                return [...prev, trimmed];
+                              });
+                            }}
+                          />
+                        </div>
+                        {activeFilterTags.length > 0 ? (
+                          <div className="place-tiles-filters-pills">
+                            {activeFilterTags.map((tag) => (
+                              <span
+                                key={tag}
+                                className="place-tiles-tag-filter-pill"
+                              >
+                                <span className="place-tiles-tag-filter-pill-text">
+                                  {tag}
+                                </span>
+                                <button
+                                  type="button"
+                                  className="place-tiles-tag-filter-pill-remove"
+                                  title={`Remove filter “${tag}”`}
+                                  aria-label={`Remove tag filter ${tag}`}
+                                  onClick={() =>
+                                    setActiveFilterTags((prev) =>
+                                      prev.filter((t) => t !== tag)
+                                    )
+                                  }
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                      <div className="place-tiles-filters-section">
+                        <h3
+                          className="place-tiles-filters-section-title"
+                          id="place-list-lists-heading"
+                        >
+                          Lists
+                        </h3>
+                        <p className="place-tiles-filters-section-hint small text-muted mb-2">
+                          Show places in <strong>any</strong> selected list.
+                        </p>
+                        {placeLists.length === 0 ? (
+                          <p className="text-muted small mb-0">
+                            No lists yet. Create one in the sidebar.
+                          </p>
+                        ) : (
+                          <ul className="place-tiles-filters-list-checkboxes list-unstyled mb-0">
+                            {placeLists.map((row) => {
+                              const id = Number(row.id);
+                              return (
+                                <li key={id}>
+                                  <label className="place-tiles-filters-list-option">
+                                    <input
+                                      type="checkbox"
+                                      checked={activeListIds.includes(id)}
+                                      onChange={() => toggleListFilter(id)}
+                                    />
+                                    <span>{row.name}</span>
+                                    {row.is_public && !row.is_owner ? (
+                                      <span className="text-muted small">
+                                        {" "}
+                                        · Public
+                                      </span>
+                                    ) : null}
+                                  </label>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        )}
+                      </div>
+                    </div>
+                    <div className="place-tiles-filters-panel-footer">
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-primary"
+                        onClick={() => setFiltersOpen(false)}
+                      >
+                        Done
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
             </div>
             <div className="place-tiles-name-search">
               {!nameSearchOpen ? (
@@ -302,17 +471,43 @@ const PlaceList = (props) => {
           <p
             id="place-list-filter-desc"
             className={`place-tiles-filter-hint text-muted small mb-0${
-              activeFilterTags.length === 0 && !nameSearchApplied.trim()
+              activeFilterTags.length === 0 &&
+              activeListIds.length === 0 &&
+              !nameSearchApplied.trim()
                 ? " visually-hidden"
                 : ""
             }`}
           >
-            {activeFilterTags.length > 0 ? (
+            {activeFilterTags.length > 0 || activeListIds.length > 0 ? (
               <>
-                Showing places that match <strong>all</strong> of these tags:{" "}
-                <span className="text-body">
-                  {activeFilterTags.map((t) => `"${t}"`).join(", ")}
-                </span>
+                Showing places
+                {activeFilterTags.length > 0 ? (
+                  <>
+                    {" "}
+                    that match <strong>all</strong> of these tags:{" "}
+                    <span className="text-body">
+                      {activeFilterTags.map((t) => `"${t}"`).join(", ")}
+                    </span>
+                  </>
+                ) : null}
+                {activeListIds.length > 0 ? (
+                  <>
+                    {activeFilterTags.length > 0 ? (
+                      <> · and appear in </>
+                    ) : (
+                      <> in </>
+                    )}
+                    <strong>any</strong> of these lists:{" "}
+                    <span className="text-body">
+                      {activeListIds
+                        .map(
+                          (id) =>
+                            listNameById.get(id) ?? `List #${id}`
+                        )
+                        .join(", ")}
+                    </span>
+                  </>
+                ) : null}
                 {nameSearchApplied.trim() ? (
                   <>
                     {" "}
@@ -322,6 +517,7 @@ const PlaceList = (props) => {
                     </span>
                   </>
                 ) : null}
+                .
               </>
             ) : nameSearchApplied.trim() ? (
               <>
@@ -333,9 +529,10 @@ const PlaceList = (props) => {
               </>
             ) : (
               <>
-                Add tags with Enter. A place must match every selected tag
-                (partial name match). Remove a tag with the pill ×. Use the
-                search icon to filter by place name (Enter to apply).
+                Open <strong>Filters</strong> to narrow by tags or lists. Tag
+                filters use partial match and combine with <strong>AND</strong>;
+                list filters combine with <strong>OR</strong>. Use the search
+                icon to filter by place name (Enter to apply).
               </>
             )}
           </p>
@@ -347,7 +544,9 @@ const PlaceList = (props) => {
               sortedPlaces.length > 0 &&
               nameSearchApplied.trim()
                 ? "No places match that name."
-                : "No places to show."}
+                : activeFilterTags.length > 0 || activeListIds.length > 0
+                  ? "No places match these filters."
+                  : "No places to show."}
             </p>
           ) : null}
           {displayPlaces &&
@@ -356,6 +555,8 @@ const PlaceList = (props) => {
               const priceLabel = formatPriceRangeDollars(place.price_range);
               const notesText = place.notes?.trim() || "";
               const hasNotes = Boolean(notesText);
+              const notesTooltipFirstLine =
+                notesText.split(/\r?\n/, 1)[0].trim();
               return (
                 <article
                   className={`place-tile${hasNotes ? " place-tile--has-notes" : ""}`}
@@ -442,7 +643,7 @@ const PlaceList = (props) => {
                         Public notes
                       </span>
                       <p className="place-tile-notes-tooltip-text mb-0">
-                        {notesText}
+                        {notesTooltipFirstLine}
                       </p>
                     </div>
                   ) : null}

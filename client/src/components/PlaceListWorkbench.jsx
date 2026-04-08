@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   listPlaceListsPicker,
   getPlaceListDetailRpc,
@@ -423,199 +424,194 @@ function PlaceListWorkbench() {
         )}
       </div>
 
-      {showSaveModal ? (
-        <div
-          className="modal show d-block place-list-modal"
-          tabIndex={-1}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="save-list-modal-title"
-        >
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title" id="save-list-modal-title">
-                  Save new list
-                </h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  aria-label="Close"
-                  onClick={() => setShowSaveModal(false)}
-                />
-              </div>
-              <form onSubmit={submitSaveNewList}>
-                <div className="modal-body">
-                  {saveError ? (
-                    <p className="text-danger small" role="alert">
-                      {saveError}
-                    </p>
-                  ) : null}
-                  <div className="mb-2">
-                    <label className="form-label" htmlFor="save-list-name">
-                      Name
-                    </label>
-                    <input
-                      id="save-list-name"
-                      className="form-control"
-                      value={saveName}
-                      onChange={(ev) => setSaveName(ev.target.value)}
-                      required
-                      autoFocus
-                    />
-                  </div>
-                  <div className="mb-2">
-                    <label className="form-label" htmlFor="save-list-desc">
-                      Description (optional)
-                    </label>
-                    <textarea
-                      id="save-list-desc"
-                      className="form-control"
-                      rows={2}
-                      value={saveDescription}
-                      onChange={(ev) => setSaveDescription(ev.target.value)}
-                    />
-                  </div>
-                  <div className="form-check">
-                    <input
-                      id="save-list-public"
-                      type="checkbox"
-                      className="form-check-input"
-                      checked={saveIsPublic}
-                      onChange={(ev) => setSaveIsPublic(ev.target.checked)}
-                    />
-                    <label className="form-check-label" htmlFor="save-list-public">
-                      Public (others can view and add places; only you can rename,
-                      remove places, or delete)
-                    </label>
-                  </div>
-                </div>
-                <div className="modal-footer">
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => setShowSaveModal(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn btn-primary"
-                    disabled={saveSubmitting}
-                  >
-                    {saveSubmitting ? "Saving…" : "Save"}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-          <div
-            className="modal-backdrop show"
-            aria-hidden
-            onClick={() => setShowSaveModal(false)}
-          />
-        </div>
-      ) : null}
-
-      {showListDetailsModal ? (
-        <div
-          className="modal show d-block place-list-modal"
-          tabIndex={-1}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="list-details-modal-title"
-        >
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title" id="list-details-modal-title">
-                  Edit list details
-                </h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  aria-label="Close"
-                  onClick={() => setShowListDetailsModal(false)}
-                />
-              </div>
-              <div className="modal-body">
-                {editError ? (
-                  <p className="text-danger small" role="alert">
-                    {editError}
-                  </p>
-                ) : null}
-                <form onSubmit={submitEditMeta}>
-                  <div className="mb-2">
-                    <label className="form-label" htmlFor="edit-list-name">
-                      Name
-                    </label>
-                    <input
-                      id="edit-list-name"
-                      className="form-control"
-                      value={editName}
-                      onChange={(ev) => setEditName(ev.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label className="form-label" htmlFor="edit-list-desc">
-                      Description (optional)
-                    </label>
-                    <textarea
-                      id="edit-list-desc"
-                      className="form-control"
-                      rows={2}
-                      value={editDescription}
-                      onChange={(ev) => setEditDescription(ev.target.value)}
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="btn btn-primary btn-sm"
-                    disabled={editSubmitting}
-                  >
-                    {editSubmitting ? "Saving…" : "Save name & description"}
-                  </button>
-                </form>
-                <hr className="my-3" />
-                <p className="small text-muted mb-2">List actions</p>
-                <div className="d-flex flex-wrap gap-2">
-                  {!listMeta?.is_public ? (
+      {showSaveModal
+        ? createPortal(
+            <div
+              className="modal show d-block place-list-modal"
+              tabIndex={-1}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="save-list-modal-title"
+            >
+              <div className="modal-dialog modal-dialog-centered">
+                <div className="modal-content">
+                  <div className="modal-header">
+                    <h5 className="modal-title" id="save-list-modal-title">
+                      Save new list
+                    </h5>
                     <button
                       type="button"
-                      className="btn btn-outline-primary btn-sm"
-                      onClick={handleMakePublicClick}
-                    >
-                      Make public
-                    </button>
-                  ) : null}
-                  <button
-                    type="button"
-                    className="btn btn-outline-danger btn-sm"
-                    onClick={handleDeleteList}
-                  >
-                    Delete list
-                  </button>
+                      className="btn-close"
+                      aria-label="Close"
+                      onClick={() => setShowSaveModal(false)}
+                    />
+                  </div>
+                  <form onSubmit={submitSaveNewList}>
+                    <div className="modal-body">
+                      {saveError ? (
+                        <p className="text-danger small" role="alert">
+                          {saveError}
+                        </p>
+                      ) : null}
+                      <div className="mb-2">
+                        <label className="form-label" htmlFor="save-list-name">
+                          Name
+                        </label>
+                        <input
+                          id="save-list-name"
+                          className="form-control"
+                          value={saveName}
+                          onChange={(ev) => setSaveName(ev.target.value)}
+                          required
+                          autoFocus
+                        />
+                      </div>
+                      <div className="mb-2">
+                        <label className="form-label" htmlFor="save-list-desc">
+                          Description (optional)
+                        </label>
+                        <textarea
+                          id="save-list-desc"
+                          className="form-control"
+                          rows={2}
+                          value={saveDescription}
+                          onChange={(ev) => setSaveDescription(ev.target.value)}
+                        />
+                      </div>
+                      <div className="form-check">
+                        <input
+                          id="save-list-public"
+                          type="checkbox"
+                          className="form-check-input"
+                          checked={saveIsPublic}
+                          onChange={(ev) => setSaveIsPublic(ev.target.checked)}
+                        />
+                        <label className="form-check-label" htmlFor="save-list-public">
+                          Public (others can view and add places; only you can rename,
+                          remove places, or delete)
+                        </label>
+                      </div>
+                    </div>
+                    <div className="modal-footer">
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => setShowSaveModal(false)}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="btn btn-primary"
+                        disabled={saveSubmitting}
+                      >
+                        {saveSubmitting ? "Saving…" : "Save"}
+                      </button>
+                    </div>
+                  </form>
                 </div>
               </div>
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowListDetailsModal(false)}
-                >
-                  Close
-                </button>
+              <div
+                className="modal-backdrop show"
+                aria-hidden
+                onClick={() => setShowSaveModal(false)}
+              />
+            </div>,
+            document.body
+          )
+        : null}
+
+      {showListDetailsModal
+        ? createPortal(
+            <div
+              className="modal show d-block place-list-modal"
+              tabIndex={-1}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="list-details-modal-title"
+            >
+              <div className="modal-dialog modal-dialog-centered">
+                <div className="modal-content">
+                  <div className="modal-header">
+                    <h5 className="modal-title" id="list-details-modal-title">
+                      Edit list details
+                    </h5>
+                    <button
+                      type="button"
+                      className="btn-close"
+                      aria-label="Close"
+                      onClick={() => setShowListDetailsModal(false)}
+                    />
+                  </div>
+                  <div className="modal-body">
+                    {editError ? (
+                      <p className="text-danger small" role="alert">
+                        {editError}
+                      </p>
+                    ) : null}
+                    <form onSubmit={submitEditMeta}>
+                      <div className="mb-2">
+                        <label className="form-label" htmlFor="edit-list-name">
+                          Name
+                        </label>
+                        <input
+                          id="edit-list-name"
+                          className="form-control"
+                          value={editName}
+                          onChange={(ev) => setEditName(ev.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="mb-3">
+                        <label className="form-label" htmlFor="edit-list-desc">
+                          Description (optional)
+                        </label>
+                        <textarea
+                          id="edit-list-desc"
+                          className="form-control"
+                          rows={2}
+                          value={editDescription}
+                          onChange={(ev) => setEditDescription(ev.target.value)}
+                        />
+                      </div>
+                      <div className="d-flex flex-wrap gap-2 align-items-center">
+                        {!listMeta?.is_public ? (
+                          <button
+                            type="button"
+                            className="btn btn-outline-primary btn-sm"
+                            onClick={handleMakePublicClick}
+                          >
+                            Make public
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          className="btn btn-outline-danger btn-sm"
+                          onClick={handleDeleteList}
+                        >
+                          Delete list
+                        </button>
+                        <button
+                          type="submit"
+                          className="btn btn-primary btn-sm"
+                          disabled={editSubmitting}
+                        >
+                          {editSubmitting ? "Saving…" : "Save"}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-          <div
-            className="modal-backdrop show"
-            aria-hidden
-            onClick={() => setShowListDetailsModal(false)}
-          />
-        </div>
-      ) : null}
+              <div
+                className="modal-backdrop show"
+                aria-hidden
+                onClick={() => setShowListDetailsModal(false)}
+              />
+            </div>,
+            document.body
+          )
+        : null}
     </aside>
   );
 }

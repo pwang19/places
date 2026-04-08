@@ -99,10 +99,14 @@ function reviewForClient(row, myUserId) {
   };
 }
 
-async function listPlacesRpc(tagFilters) {
+async function listPlacesRpc(tagFilters, listFilters) {
   if (!supabase) throw apiError("Supabase is not configured", 500);
+  const listIds = Array.isArray(listFilters)
+    ? listFilters.map((n) => Number(n)).filter((n) => Number.isFinite(n))
+    : [];
   const { data, error } = await supabase.rpc("list_places", {
     tag_filters: tagFilters.length ? tagFilters : null,
+    list_filters: listIds.length ? listIds : null,
   });
   if (error) throw fromPostgrestError(error);
   let parsed = data;
@@ -150,9 +154,18 @@ const PlaceFinder = {
 
     if (path === "/" || path === "") {
       const raw = config?.params?.tag;
-      const list = Array.isArray(raw) ? raw : raw != null && raw !== "" ? [raw] : [];
-      const cleaned = list.map((t) => String(t).trim()).filter(Boolean);
-      const places = await listPlacesRpc(cleaned);
+      const tagList = Array.isArray(raw) ? raw : raw != null && raw !== "" ? [raw] : [];
+      const cleaned = tagList.map((t) => String(t).trim()).filter(Boolean);
+      const rawListIds = config?.params?.list;
+      const listIdArr = Array.isArray(rawListIds)
+        ? rawListIds
+        : rawListIds != null && rawListIds !== ""
+          ? [rawListIds]
+          : [];
+      const cleanedListIds = listIdArr
+        .map((n) => Number(n))
+        .filter((n) => Number.isFinite(n));
+      const places = await listPlacesRpc(cleaned, cleanedListIds);
       return {
         data: { status: "Success", results: places.length, data: { places } },
       };
