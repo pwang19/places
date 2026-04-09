@@ -2,6 +2,7 @@ import React, { useContext, useState, useEffect } from "react";
 import PlaceFinder from "../apis/PlaceFinder";
 import { PlacesContext } from "../context/PlacesContext";
 import LocationAutocomplete from "./LocationAutocomplete";
+import PlaceContactFields from "./PlaceContactFields";
 import TagInput from "./TagInput";
 
 const AddPlace = ({ showModal, onClose }) => {
@@ -9,6 +10,9 @@ const AddPlace = ({ showModal, onClose }) => {
 
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
+  const [phone, setPhone] = useState("");
+  const [emails, setEmails] = useState([]);
+  const [websites, setWebsites] = useState([]);
   const [priceRange, setPriceRange] = useState("");
   const [notes, setNotes] = useState("");
   const [reviewsDisabled, setReviewsDisabled] = useState(false);
@@ -21,6 +25,9 @@ const AddPlace = ({ showModal, onClose }) => {
     if (!showModal) {
       setName("");
       setLocation("");
+      setPhone("");
+      setEmails([]);
+      setWebsites([]);
       setPriceRange("");
       setNotes("");
       setReviewsDisabled(false);
@@ -60,6 +67,9 @@ const AddPlace = ({ showModal, onClose }) => {
       const response = await PlaceFinder.post("/", {
         name: trimmedName,
         location: trimmedLocation,
+        phone: phone.trim() || undefined,
+        emails,
+        websites,
         price_range: priceRange === "" ? null : Number(priceRange),
         notes: notes.trim() || undefined,
         reviews_disabled: reviewsDisabled,
@@ -76,6 +86,9 @@ const AddPlace = ({ showModal, onClose }) => {
       onClose();
       setName("");
       setLocation("");
+      setPhone("");
+      setEmails([]);
+      setWebsites([]);
       setPriceRange("");
       setNotes("");
       setReviewsDisabled(false);
@@ -176,6 +189,15 @@ const AddPlace = ({ showModal, onClose }) => {
                     required
                   />
                 </div>
+                <PlaceContactFields
+                  idPrefix="add-place"
+                  phone={phone}
+                  onPhoneChange={setPhone}
+                  emails={emails}
+                  onEmailsChange={setEmails}
+                  websites={websites}
+                  onWebsitesChange={setWebsites}
+                />
                 <div className="mb-3">
                   <label htmlFor="priceRange" className="form-label">
                     Price range

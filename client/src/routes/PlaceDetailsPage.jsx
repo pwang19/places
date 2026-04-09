@@ -10,6 +10,7 @@ import PrivatePlaceNote from "../components/PrivatePlaceNote";
 import UserMenu from "../components/UserMenu";
 import { normalizeTags } from "../utils/tags";
 import { formatPriceRangeDollars } from "../utils/priceRange";
+import { cleanStringList, websiteHref } from "../utils/contactInfo";
 
 const googleMapsUrlForQuery = (query) =>
   `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
@@ -76,59 +77,40 @@ const PlaceDetailsPage = () => {
 
   const reviewsDisabled = Boolean(selectedPlace?.place?.reviews_disabled);
 
+  const detailPhone =
+    selectedPlace?.place?.phone != null
+      ? String(selectedPlace.place.phone).trim()
+      : "";
+  const detailEmails = selectedPlace?.place
+    ? cleanStringList(selectedPlace.place.emails)
+    : [];
+  const detailWebsites = selectedPlace?.place
+    ? cleanStringList(selectedPlace.place.websites)
+    : [];
+  const hasContactBlock =
+    Boolean(detailPhone) ||
+    detailEmails.length > 0 ||
+    detailWebsites.length > 0;
+
   return (
     <div>
       <div className="place-details-toolbar mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <div className="d-flex flex-wrap gap-2 align-items-center">
-          <button
-            type="button"
-            onClick={() => navigate("/")}
-            className="btn btn-modern btn-primary-modern"
-            style={{
-              borderRadius: "12px",
-              padding: "0.75rem 1.5rem",
-              fontWeight: "600",
-            }}
-          >
-            <i className="fas fa-arrow-left me-2"></i>
-            Back to Places
-          </button>
+        <button
+          type="button"
+          onClick={() => navigate("/")}
+          className="btn btn-modern btn-primary-modern"
+          style={{
+            borderRadius: "12px",
+            padding: "0.75rem 1.5rem",
+            fontWeight: "600",
+          }}
+        >
+          <i className="fas fa-arrow-left me-2"></i>
+          Back to Places
+        </button>
+        <div className="ms-auto d-flex align-items-center flex-shrink-0">
           <UserMenu />
         </div>
-        {id ? (
-          <div className="d-flex flex-wrap gap-2 align-items-center">
-            <button
-              type="button"
-              onClick={() => setShowUpdateModal(true)}
-              className="btn btn-modern btn-warning-modern"
-              style={{
-                borderRadius: "12px",
-                padding: "0.75rem 1.5rem",
-                fontWeight: "600",
-              }}
-              title="Edit place"
-            >
-              <i className="fas fa-edit me-2"></i>
-              Edit
-            </button>
-            {!reviewsDisabled ? (
-              <button
-                type="button"
-                onClick={openAddReview}
-                className="btn btn-modern btn-secondary-modern"
-                style={{
-                  borderRadius: "12px",
-                  padding: "0.75rem 1.5rem",
-                  fontWeight: "600",
-                }}
-                title="Add a review"
-              >
-                <i className="fas fa-plus-circle me-2"></i>
-                Add Review
-              </button>
-            ) : null}
-          </div>
-        ) : null}
       </div>
       {!reviewsDisabled ? (
         <AddReview
@@ -156,38 +138,72 @@ const PlaceDetailsPage = () => {
           <div className="place-details-hero place-details-hero--with-side-panel">
             <div
               className={`place-details-header${
-                selectedPlace.place.location?.trim()
+                detailPriceLabel || selectedPlace.place.location?.trim()
                   ? " place-details-header--has-address"
                   : ""
               }`}
             >
-              <h1>
-                <i className="fas fa-store me-3"></i>
-                {selectedPlace.place.name}
-              </h1>
-              {detailPriceLabel ? (
-                <p className="place-details-price-range mb-0">
-                  <span className="visually-hidden">Price range: </span>
-                  {detailPriceLabel}
-                </p>
-              ) : null}
-              {selectedPlace.place.location?.trim() ? (
-                <p className="place-details-address mb-0">
-                  <i className="fas fa-map-marker-alt me-2" aria-hidden />
-                  <a
-                    href={googleMapsUrlForQuery(selectedPlace.place.location)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="place-details-address-link"
-                    title="Open in Google Maps"
+              <div className="place-details-title-row">
+                <h1 className="place-details-title-heading mb-0">
+                  {selectedPlace.place.name}
+                </h1>
+                {id ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowUpdateModal(true)}
+                    className="btn btn-modern btn-warning-modern place-details-title-edit flex-shrink-0"
+                    style={{
+                      borderRadius: "12px",
+                      padding: "0.5rem 1.1rem",
+                      fontWeight: "600",
+                    }}
+                    title="Edit place"
                   >
-                    {selectedPlace.place.location}
-                  </a>
-                </p>
+                    <i className="fas fa-edit me-2"></i>
+                    Edit
+                  </button>
+                ) : null}
+              </div>
+              {detailPriceLabel || selectedPlace.place.location?.trim() ? (
+                <div className="place-details-price-location-row">
+                  {detailPriceLabel ? (
+                    <span className="place-details-price-range place-details-price-range--inline">
+                      <span className="visually-hidden">Price range: </span>
+                      {detailPriceLabel}
+                    </span>
+                  ) : null}
+                  {detailPriceLabel && selectedPlace.place.location?.trim() ? (
+                    <span
+                      className="place-details-price-location-sep"
+                      aria-hidden
+                    >
+                      ·
+                    </span>
+                  ) : null}
+                  {selectedPlace.place.location?.trim() ? (
+                    <span className="place-details-address place-details-address--inline">
+                      <i
+                        className="fas fa-map-marker-alt me-2"
+                        aria-hidden
+                      />
+                      <a
+                        href={googleMapsUrlForQuery(
+                          selectedPlace.place.location
+                        )}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="place-details-address-link"
+                        title="Open in Google Maps"
+                      >
+                        {selectedPlace.place.location}
+                      </a>
+                    </span>
+                  ) : null}
+                </div>
               ) : null}
               {normalizeTags(selectedPlace.place.tags).length > 0 ? (
                 <div
-                  className="place-details-tags-readonly d-flex flex-wrap justify-content-center gap-2"
+                  className="place-details-tags-readonly d-flex flex-wrap justify-content-start gap-2 mt-3 w-100"
                   aria-label="Tags"
                 >
                   {normalizeTags(selectedPlace.place.tags).map((t) => (
@@ -198,6 +214,56 @@ const PlaceDetailsPage = () => {
                       {t.name}
                     </span>
                   ))}
+                </div>
+              ) : null}
+              {hasContactBlock ? (
+                <div className="place-details-contact w-100 text-start mt-3">
+                  {detailPhone ? (
+                    <p className="place-details-contact-line mb-1">
+                      <i className="fas fa-phone me-2" aria-hidden />
+                      <a
+                        href={`tel:${detailPhone.replace(/\s/g, "")}`}
+                        className="place-details-address-link"
+                      >
+                        {detailPhone}
+                      </a>
+                    </p>
+                  ) : null}
+                  {detailEmails.map((email) => (
+                    <p
+                      key={email}
+                      className="place-details-contact-line mb-1"
+                    >
+                      <i className="fas fa-envelope me-2" aria-hidden />
+                      <a
+                        href={`mailto:${encodeURIComponent(email)}`}
+                        className="place-details-address-link"
+                      >
+                        {email}
+                      </a>
+                    </p>
+                  ))}
+                  {detailWebsites.map((rawUrl) => {
+                    const href = websiteHref(rawUrl);
+                    if (!href) return null;
+                    const label = String(rawUrl).trim();
+                    return (
+                      <p
+                        key={label}
+                        className="place-details-contact-line mb-1"
+                      >
+                        <i className="fas fa-globe me-2" aria-hidden />
+                        <a
+                          href={href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="place-details-address-link"
+                        >
+                          {label}
+                        </a>
+                      </p>
+                    );
+                  })}
                 </div>
               ) : null}
               {selectedPlace.place.notes?.trim() ? (
@@ -211,32 +277,6 @@ const PlaceDetailsPage = () => {
                   </p>
                 </div>
               ) : null}
-              <p className="place-details-public-lists-count text-muted small mb-0 mt-3 text-start w-100">
-                {(() => {
-                  const n = Number(selectedPlace.place.public_list_count);
-                  const c = Number.isFinite(n) ? n : 0;
-                  return c === 1
-                    ? "Added to 1 public list"
-                    : `Added to ${c} public list(s)`;
-                })()}
-              </p>
-              {!reviewsDisabled ? (
-                <div className="rating-display justify-content-center">
-                  <StarRating rating={selectedPlace.place.average_rating} />
-                  <span
-                    className="ml-1"
-                    style={{
-                      fontSize: "1.25rem",
-                      fontWeight: "600",
-                      color: "var(--text-muted)",
-                    }}
-                  >
-                    {selectedPlace.place.count
-                      ? `(${selectedPlace.place.count} reviews)`
-                      : "(0 reviews)"}
-                  </span>
-                </div>
-              ) : null}
             </div>
             <PrivatePlaceNote
               placeId={id}
@@ -246,10 +286,41 @@ const PlaceDetailsPage = () => {
           </div>
           {!reviewsDisabled ? (
             <div className="reviews-section">
-              <h3 className="mb-4">
-                <i className="fas fa-comments me-2"></i>
-                Reviews
-              </h3>
+              <div className="reviews-section-header">
+                <div className="reviews-section-title-row">
+                  <h3 className="reviews-section-heading mb-0">
+                    <i className="fas fa-comments me-2" aria-hidden></i>
+                    Reviews
+                  </h3>
+                  <div
+                    className="rating-display reviews-section-rating"
+                    aria-label={`Average rating ${
+                      selectedPlace.place.average_rating ?? 0
+                    } out of 5`}
+                  >
+                    <StarRating rating={selectedPlace.place.average_rating} />
+                    <span className="reviews-section-review-count">
+                      {selectedPlace.place.count
+                        ? `(${selectedPlace.place.count} reviews)`
+                        : "(0 reviews)"}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={openAddReview}
+                  className="btn btn-modern btn-secondary-modern reviews-section-add-btn flex-shrink-0"
+                  style={{
+                    borderRadius: "12px",
+                    padding: "0.5rem 1.1rem",
+                    fontWeight: "600",
+                  }}
+                  title="Add a review"
+                >
+                  <i className="fas fa-plus-circle me-2"></i>
+                  Add Review
+                </button>
+              </div>
               <Reviews
                 reviews={selectedPlace.reviews}
                 placeId={id}

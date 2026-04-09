@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useState } from "react";
 import PlaceFinder from "../apis/PlaceFinder";
 import { PlacesContext } from "../context/PlacesContext";
 import LocationAutocomplete from "./LocationAutocomplete";
+import PlaceContactFields from "./PlaceContactFields";
 import TagInput from "./TagInput";
 import { normalizeTags } from "../utils/tags";
 
@@ -15,6 +16,9 @@ const UpdatePlace = ({
   const { setPlaces } = useContext(PlacesContext);
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
+  const [phone, setPhone] = useState("");
+  const [emails, setEmails] = useState([""]);
+  const [websites, setWebsites] = useState([""]);
   const [priceRange, setPriceRange] = useState("");
   const [notes, setNotes] = useState("");
   const [reviewsDisabled, setReviewsDisabled] = useState(false);
@@ -42,6 +46,17 @@ const UpdatePlace = ({
           const place = response.data.data.place;
           setName(place.name);
           setLocation(place.location);
+          setPhone(place.phone != null ? String(place.phone) : "");
+          setEmails(
+            Array.isArray(place.emails) && place.emails.length
+              ? place.emails.map((s) => String(s))
+              : [""]
+          );
+          setWebsites(
+            Array.isArray(place.websites) && place.websites.length
+              ? place.websites.map((s) => String(s))
+              : [""]
+          );
           setPriceRange(
             place.price_range != null && place.price_range !== ""
               ? String(place.price_range)
@@ -63,6 +78,9 @@ const UpdatePlace = ({
     if (!showModal) {
       setName("");
       setLocation("");
+      setPhone("");
+      setEmails([""]);
+      setWebsites([""]);
       setPriceRange("");
       setNotes("");
       setReviewsDisabled(false);
@@ -94,6 +112,9 @@ const UpdatePlace = ({
       const response = await PlaceFinder.put(`/${placeId}`, {
         name: name,
         location: location,
+        phone: phone.trim() || null,
+        emails,
+        websites,
         price_range: priceRange === "" ? null : Number(priceRange),
         notes: notes.trim() || null,
         reviews_disabled: reviewsDisabled,
@@ -111,6 +132,9 @@ const UpdatePlace = ({
       onClose();
       setName("");
       setLocation("");
+      setPhone("");
+      setEmails([""]);
+      setWebsites([""]);
       setPriceRange("");
       setNotes("");
       setReviewsDisabled(false);
@@ -152,6 +176,9 @@ const UpdatePlace = ({
       onClose();
       setName("");
       setLocation("");
+      setPhone("");
+      setEmails([""]);
+      setWebsites([""]);
       setPriceRange("");
       setNotes("");
       setReviewsDisabled(false);
@@ -228,6 +255,15 @@ const UpdatePlace = ({
                     required
                   />
                 </div>
+                <PlaceContactFields
+                  idPrefix="update-place"
+                  phone={phone}
+                  onPhoneChange={setPhone}
+                  emails={emails}
+                  onEmailsChange={setEmails}
+                  websites={websites}
+                  onWebsitesChange={setWebsites}
+                />
                 <div className="mb-3">
                   <label htmlFor="updatePriceRange" className="form-label">
                     Price range

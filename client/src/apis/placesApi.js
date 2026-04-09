@@ -26,6 +26,19 @@ function fromPostgrestError(error) {
   return err;
 }
 
+function normalizeContactPhone(v) {
+  if (v == null) return null;
+  const t = String(v).trim();
+  return t || null;
+}
+
+function normalizeContactStringList(v) {
+  if (v == null) return null;
+  const arr = Array.isArray(v) ? v : [];
+  const cleaned = [...new Set(arr.map((s) => String(s).trim()).filter(Boolean))];
+  return cleaned.length ? cleaned : null;
+}
+
 async function fetchPrivateNoteDecrypted(placeId) {
   if (!supabase) return null;
   const { data: { session } } = await supabase.auth.getSession();
@@ -191,6 +204,9 @@ const PlaceFinder = {
       const row = {
         name: body.name,
         location: body.location,
+        phone: normalizeContactPhone(body.phone),
+        emails: normalizeContactStringList(body.emails),
+        websites: normalizeContactStringList(body.websites),
         price_range: body.price_range ?? null,
         notes: body.notes != null && String(body.notes).trim() ? String(body.notes).trim() : null,
         reviews_disabled: Boolean(body.reviews_disabled),
@@ -306,6 +322,9 @@ const PlaceFinder = {
       const updates = {
         name: body.name,
         location: body.location,
+        phone: normalizeContactPhone(body.phone),
+        emails: normalizeContactStringList(body.emails),
+        websites: normalizeContactStringList(body.websites),
         price_range: body.price_range ?? null,
         notes:
           body.notes != null && String(body.notes).trim()
