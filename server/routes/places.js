@@ -3,6 +3,13 @@ const db = require("../db");
 const { fetchPlaceRowById, listPlaceRows } = require("../queries/places");
 const asyncHandler = require("../middleware/asyncHandler");
 const { encrypt, decrypt } = require("../services/privateNoteCrypto");
+const { displayNameFromUser } = require("../lib/displayName");
+const {
+  isValidPriceRangeInt,
+  isValidRatingInt,
+  PRICE_RANGE_INVALID_MESSAGE,
+  RATING_INVALID_MESSAGE,
+} = require("@places/shared");
 
 const router = express.Router();
 
@@ -31,10 +38,8 @@ function normalizePriceRange(body) {
     return null;
   }
   const n = Number(body.price_range);
-  if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1 || n > 5) {
-    const err = new Error(
-      "price_range must be an integer from 1 to 5, or omitted for not applicable"
-    );
+  if (!isValidPriceRangeInt(n)) {
+    const err = new Error(PRICE_RANGE_INVALID_MESSAGE);
     err.status = 400;
     throw err;
   }
@@ -46,17 +51,6 @@ function normalizeTagQuery(query) {
   if (raw == null || raw === "") return [];
   const list = Array.isArray(raw) ? raw : [raw];
   return list.map((t) => String(t).trim()).filter(Boolean);
-}
-
-function displayNameFromUser(user) {
-  const rawName = user && user.name != null ? String(user.name).trim() : "";
-  if (rawName) return rawName.slice(0, 50);
-  const email = user && user.email ? String(user.email) : "";
-  if (email) {
-    const local = email.split("@")[0];
-    if (local && local.trim()) return local.trim().slice(0, 50);
-  }
-  return "Member";
 }
 
 function parseReviewBody(body) {
@@ -72,8 +66,8 @@ function parseReviewBody(body) {
     throw err;
   }
   const n = Number(body.rating);
-  if (!Number.isFinite(n) || !Number.isInteger(n) || n < 1 || n > 5) {
-    const err = new Error("rating must be an integer from 1 to 5");
+  if (!isValidRatingInt(n)) {
+    const err = new Error(RATING_INVALID_MESSAGE);
     err.status = 400;
     throw err;
   }

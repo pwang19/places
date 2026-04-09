@@ -1,0 +1,246 @@
+import React, { useState, useEffect } from "react";
+import PlaceFinder from "../../api/placesApi";
+import { useParams } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import { postingAsLabel } from "../../utils/displayName";
+
+const AddReview = ({ showModal, onClose, onSuccess, editingReview = null }) => {
+  const { id } = useParams();
+  const { user } = useAuth();
+
+  const [rating, setRating] = useState("Rating");
+  const [reviewText, setReviewText] = useState("");
+  const [submitError, setSubmitError] = useState("");
+
+  const isEdit = Boolean(editingReview);
+
+  useEffect(() => {
+    if (!showModal) {
+      setRating("Rating");
+      setReviewText("");
+      setSubmitError("");
+    }
+  }, [showModal]);
+
+  useEffect(() => {
+    if (showModal && editingReview) {
+      setRating(String(editingReview.rating));
+      setReviewText(editingReview.review || "");
+      setSubmitError("");
+    } else if (showModal && !editingReview) {
+      setRating("Rating");
+      setReviewText("");
+      setSubmitError("");
+    }
+  }, [showModal, editingReview]);
+
+  useEffect(() => {
+    if (showModal) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [showModal]);
+
+  const handleClose = (e) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    setSubmitError("");
+    onClose();
+  };
+
+  const handleSubmitReview = async (e) => {
+    e.preventDefault();
+    setSubmitError("");
+    if (!id || rating === "Rating") return;
+    const ratingNum = Number(rating);
+    if (!Number.isInteger(ratingNum) || ratingNum < 1 || ratingNum > 5) return;
+
+    try {
+      if (isEdit) {
+        await PlaceFinder.put(`/${id}/reviews/${editingReview.id}`, {
+          review: reviewText,
+          rating: ratingNum,
+        });
+      } else {
+        await PlaceFinder.post(`/${id}/addReview`, {
+          review: reviewText,
+          rating: ratingNum,
+        });
+      }
+      await onSuccess?.();
+      onClose();
+      setRating("Rating");
+      setReviewText("");
+    } catch (err) {
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        "Could not save the review.";
+      setSubmitError(String(msg));
+      console.error("Error submitting review:", err);
+    }
+  };
+
+  if (!showModal) return null;
+
+  return (
+    <>
+      <div
+        className="modal-backdrop show"
+        onClick={handleClose}
+        style={{ opacity: 0.5, zIndex: 1040 }}
+      />
+      <div
+        className="modal show modern-modal"
+        style={{ display: "block", zIndex: 1050 }}
+        tabIndex={-1}
+        role="dialog"
+        aria-labelledby="add-review-modal-title"
+        onClick={(e) => {
+          if ((e.target as HTMLElement).classList.contains("modal")) {
+            handleClose(e);
+          }
+        }}
+      >
+        <div
+          className="modal-dialog modal-dialog-centered modal-lg"
+          role="document"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h5 className="modal-title" id="add-review-modal-title">
+                <i
+                  className={`fas ${isEdit ? "fa-edit" : "fa-plus-circle"} me-2`}
+                ></i>
+                {isEdit ? "Edit Review" : "Add Review"}
+              </h5>
+              <button
+                type="button"
+                className="btn-close btn-close-white"
+                onClick={handleClose}
+                aria-label="Close"
+              />
+            </div>
+            <form onSubmit={handleSubmitReview}>
+              <div className="modal-body">
+                {submitError ? (
+                  <div className="alert alert-danger mb-3" role="alert">
+                    {submitError}
+                  </div>
+                ) : null}
+                {!isEdit && user ? (
+                  <p
+                    className="mb-3 small"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    <i className="fas fa-user me-2" aria-hidden />
+                    Posting as{" "}
+                    <strong style={{ color: "var(--text-heading)" }}>
+                      {postingAsLabel(user)}
+                    </strong>
+                  </p>
+                ) : null}
+                <div className="row g-3">
+                  <div className="col-12 col-md-5">
+                    <label
+                      htmlFor="add-review-rating"
+                      className="form-label"
+                      style={{
+                        color: "var(--text-heading)",
+                        fontWeight: "600",
+                      }}
+                    >
+                      <i className="fas fa-star me-2"></i>
+                      Rating
+                    </label>
+                    <select
+                      value={rating}
+                      onChange={(e) => setRating(e.target.value)}
+                      id="add-review-rating"
+                      className="form-select"
+                      style={{
+                        background: "var(--surface)",
+                        border: "2px solid var(--border-color)",
+                        borderRadius: "10px",
+                        color: "var(--text-primary)",
+                        padding: "0.75rem 1rem",
+                      }}
+                      required
+                    >
+                      <option value="Rating" disabled>
+                        Select Rating
+                      </option>
+                      <option value="1">⭐ 1 Star</option>
+                      <option value="2">⭐⭐ 2 Stars</option>
+                      <option value="3">⭐⭐⭐ 3 Stars</option>
+                      <option value="4">⭐⭐⭐⭐ 4 Stars</option>
+                      <option value="5">⭐⭐⭐⭐⭐ 5 Stars</option>
+                    </select>
+                  </div>
+                  <div className="col-12">
+                    <label
+                      htmlFor="add-review-text"
+                      className="form-label"
+                      style={{
+                        color: "var(--text-heading)",
+                        fontWeight: "600",
+                      }}
+                    >
+                      <i className="fas fa-comment me-2"></i>
+                      Your Review
+                    </label>
+                    <textarea
+                      value={reviewText}
+                      onChange={(e) => setReviewText(e.target.value)}
+                      id="add-review-text"
+                      className="form-control"
+                      rows={4}
+                      style={{
+                        background: "var(--surface)",
+                        border: "2px solid var(--border-color)",
+                        borderRadius: "10px",
+                        color: "var(--text-primary)",
+                        padding: "0.75rem 1rem",
+                        resize: "vertical",
+                      }}
+                      placeholder="Share your experience..."
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-modern btn-secondary-modern"
+                  onClick={handleClose}
+                >
+                  <i className="fas fa-times me-2"></i>
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-modern btn-primary-modern"
+                  style={{ minWidth: "150px" }}
+                >
+                  <i className="fas fa-paper-plane me-2"></i>
+                  {isEdit ? "Save changes" : "Submit Review"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
+export default AddReview;

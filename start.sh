@@ -18,13 +18,13 @@ command -v npm >/dev/null 2>&1 || {
   exit 1
 }
 
-echo "Starting client at http://localhost:3000 (Supabase: set REACT_APP_SUPABASE_* in client/.env)."
+echo "Starting client at http://localhost:3000 (Supabase: set VITE_SUPABASE_* and VITE_* in client/.env)."
 if [[ ! -f "${ROOT}/client/.env" ]]; then
   echo "Note: client/.env is missing. Copy client/.env.example and set Supabase + Google vars." >&2
 fi
 echo "Press Ctrl+C to stop."
 
-(cd "${ROOT}/client" && npm start) &
+(cd "${ROOT}" && npm run dev -w client) &
 CLIENT_PID=$!
 
 wait

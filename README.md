@@ -1,6 +1,6 @@
 # Places
 
-A small app for listing **places**, **reviews**, and **tags**. The default stack is **React** (Create React App) + **Supabase** (Postgres, Auth, RLS, RPCs) + an **Edge Function** for encrypted private notes. You can deploy the UI to **Cloudflare Pages** or any static host.
+A small app for listing **places**, **reviews**, and **tags**. The default stack is **React** (Vite + TypeScript) + **Supabase** (Postgres, Auth, RLS, RPCs) + an **Edge Function** for encrypted private notes. You can deploy the UI to **Cloudflare Pages** or any static host.
 
 ## Features
 
@@ -20,30 +20,31 @@ A small app for listing **places**, **reviews**, and **tags**. The default stack
 
 | Path | Role |
 |------|------|
-| `client/` | React app (Create React App) |
+| `client/` | React app (Vite + TypeScript) |
+| `packages/shared/` | Shared constants and validation (`@places/shared`; TypeScript → CJS for Node) |
 | `supabase/migrations/` | Postgres schema, RLS, RPCs |
 | `supabase/functions/private-note/` | Edge Function for private notes |
 | [SUPABASE.md](SUPABASE.md) | **Start here:** Supabase, Google Auth, Edge deploy, Cloudflare Pages |
-| `server/` | **Legacy** Express API + `pg` (optional; not used by the default client) |
+| `server/` | **Legacy** Express API + `pg` (optional; uses `@places/shared`) |
 | [SETUP.md](SETUP.md) | Legacy local setup for Express + Postgres |
 
 ## Quick start (Supabase)
 
-1. Create a Supabase project and apply the migration: **`supabase link`** + **`supabase db push`** from the repo root, or paste the SQL from `supabase/migrations/` in the Dashboard SQL Editor. Details in [SUPABASE.md](SUPABASE.md) (section B).
-2. Enable **Google** in Supabase Auth. Deploy the **`private-note`** Edge Function and set the secret: **`supabase secrets set PRIVATE_NOTES_KEY=<64 hex chars>`** (generate with `openssl rand -hex 32`), then **`supabase functions deploy private-note`**. See [SUPABASE.md](SUPABASE.md) (section E).
-3. From `client/`:
+1. Create a Supabase project and apply migrations: **`supabase link`** + **`supabase db push`** from the repo root, or paste SQL from `supabase/migrations/` in the Dashboard. Details in [SUPABASE.md](SUPABASE.md).
+2. Enable **Google** in Supabase Auth. Deploy **`private-note`** and set **`supabase secrets set PRIVATE_NOTES_KEY=...`**, then **`supabase functions deploy private-note`**. See [SUPABASE.md](SUPABASE.md).
+3. From the **repository root**:
 
 ```bash
 npm install
-cp .env.example .env
-# Edit .env: REACT_APP_SUPABASE_URL, REACT_APP_SUPABASE_ANON_KEY, REACT_APP_GOOGLE_CLIENT_ID
-# Optional: REACT_APP_ALLOWED_EMAIL_DOMAIN (default acts2.network)
-npm start
+cp client/.env.example client/.env
+# Edit client/.env: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_GOOGLE_CLIENT_ID
+# Optional: VITE_ALLOWED_EMAIL_DOMAIN (default acts2.network)
+npm run dev -w client
 ```
 
 4. Open [http://localhost:3000](http://localhost:3000).
 
-**One shell (repo root)** — starts only the React app (data and auth are Supabase):
+**One shell** — same as step 3, or:
 
 ```bash
 chmod +x start.sh   # first time only
@@ -52,24 +53,18 @@ chmod +x start.sh   # first time only
 
 ## Production build (e.g. Cloudflare Pages)
 
-- **Root directory:** `client`  
-- **Build:** `npm ci && npm run build`  
-- **Output:** `build`  
-- Set the same `REACT_APP_*` variables in the host’s build environment. Variable names match [`client/.env.production.example`](client/.env.production.example); a full Pages checklist is in [SUPABASE.md](SUPABASE.md) (section F).  
+- **Install:** from repo root, `npm ci` (workspaces install `@places/shared` and run its `prepare` build).  
+- **Build:** `npm run build -w client`  
+- **Output:** `client/dist` (not `build`)  
+- Set **`VITE_*`** variables in the host (see [`client/.env.production.example`](client/.env.production.example)).  
 - SPA fallback: [`client/public/_redirects`](client/public/_redirects).
-
-## Google sign-in
-
-Use a Google OAuth **Web client ID** configured in both **Google Cloud Console** and **Supabase → Authentication → Google**. Authorized JavaScript origins must include your app origin (e.g. `http://localhost:3000` and your Pages URL).
-
-The client can restrict sign-in to **`@REACT_APP_ALLOWED_EMAIL_DOMAIN`** (default `acts2.network`) after token exchange. For stricter enforcement, add a Supabase Auth Hook (see [SUPABASE.md](SUPABASE.md)).
 
 ## Legacy Express API (optional)
 
-The previous **PERN** stack (`server/` + cookie sessions + `/api/v1`) is still in the repo for reference or gradual migration. See [SETUP.md](SETUP.md) and [server/.env.example](server/.env.example). The current React client talks to **Supabase only**; it does not use `REACT_APP_API_URL` unless you restore an older client build.
+The **PERN** stack in `server/` uses **`npm run start -w server`** from the root after `npm install`. It depends on **`@places/shared`** (built on install). See [SETUP.md](SETUP.md) and [server/.env.example](server/.env.example). The default React client talks to **Supabase only**.
 
 ## Tech stack
 
-- **Frontend:** React 18, React Router, Bootstrap 5, `@supabase/supabase-js`, `@react-oauth/google`  
+- **Frontend:** React 18, TypeScript, Vite, React Router, Bootstrap 5, `@supabase/supabase-js`, `@react-oauth/google`  
 - **Backend (default):** Supabase Postgres, PostgREST, RLS, RPCs, Edge Functions  
 - **Legacy backend:** Express, `pg` (`server/`)
