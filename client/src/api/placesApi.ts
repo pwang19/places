@@ -125,7 +125,7 @@ function reviewForClient(row, myUserId) {
   };
 }
 
-async function listPlacesRpc(tagFilters, listFilters) {
+async function listPlacesRpc(tagFilters, listFilters, flaggedOnly = false) {
   if (!supabase) throw apiError("Supabase is not configured", 500);
   const listIds = Array.isArray(listFilters)
     ? listFilters.map((n) => Number(n)).filter((n) => Number.isFinite(n))
@@ -133,6 +133,7 @@ async function listPlacesRpc(tagFilters, listFilters) {
   const { data, error } = await supabase.rpc("list_places", {
     tag_filters: tagFilters.length ? tagFilters : null,
     list_filters: listIds.length ? listIds : null,
+    p_flagged_only: Boolean(flaggedOnly),
   });
   if (error) throw fromPostgrestError(error);
   const parsed = parseRpcPayload(data);
@@ -184,7 +185,8 @@ const PlaceFinder = {
       const cleanedListIds = listIdArr
         .map((n) => Number(n))
         .filter((n) => Number.isFinite(n));
-      const places = await listPlacesRpc(cleaned, cleanedListIds);
+      const flaggedOnly = Boolean(config?.params?.flaggedOnly);
+      const places = await listPlacesRpc(cleaned, cleanedListIds, flaggedOnly);
       return {
         data: { status: "Success", results: places.length, data: { places } },
       };
@@ -259,6 +261,18 @@ const PlaceFinder = {
       if (!isValidRatingInt(rating)) {
         throw apiError(RATING_INVALID_MESSAGE, 400);
       }
+      const { count: existingCount, error: countErr } = await supabase
+        .from("reviews")
+        .select("id", { count: "exact", head: true })
+        .eq("place_id", placeId)
+        .eq("user_id", user.id);
+      if (countErr) throw fromPostgrestError(countErr);
+      if (existingCount && existingCount > 0) {
+        throw apiError(
+          "You already have a review for this place. Edit or delete it to post again.",
+          409
+        );
+      }
       const { data: row, error } = await supabase
         .from("reviews")
         .insert({
@@ -266,10 +280,19 @@ const PlaceFinder = {
           name: displayName,
           review,
           rating,
+          user_id: user.id,
         })
         .select("*")
         .single();
-      if (error) throw fromPostgrestError(error);
+      if (error) {
+        if (error.code === "23505") {
+          throw apiError(
+            "You already have a review for this place. Edit or delete it to post again.",
+            409
+          );
+        }
+        throw fromPostgrestError(error);
+      }
       return {
         data: {
           status: "Success",
@@ -505,6 +528,53 @@ export async function deletePlaceListRpc(listId) {
     .eq("id", Number(listId));
   if (error) throw fromPostgrestError(error);
   if (!count) throw apiError("List not found", 404);
+}
+
+export async function getAppAdmins() {
+  if (!supabase) throw apiError("Supabase is not configured", 500);
+  const { data, error } = await supabase.rpc("get_app_admins");
+  if (error) throw fromPostgrestError(error);
+  const arr = parseRpcPayload(data);
+  if (!Array.isArray(arr)) return [];
+  return arr.map((s) => String(s).trim()).filter(Boolean);
+}
+
+export async function replaceAppAdmins(usernames) {
+  if (!supabase) throw apiError("Supabase is not configured", 500);
+  const list = Array.isArray(usernames)
+    ? usernames.map((s) => String(s).trim()).filter(Boolean)
+    : [];
+  const { error } = await supabase.rpc("replace_app_admins", {
+    p_usernames: list,
+  });
+  if (error) throw fromPostgrestError(error);
+}
+
+export async function addPlaceFlagRpc(placeId, reason) {
+  if (!supabase) throw apiError("Supabase is not configured", 500);
+  const { error } = await supabase.rpc("add_place_flag", {
+    p_place_id: Number(placeId),
+    p_reason: String(reason ?? "").trim(),
+  });
+  if (error) throw fromPostgrestError(error);
+}
+
+export async function getPlaceFlagsRpc(placeId) {
+  if (!supabase) throw apiError("Supabase is not configured", 500);
+  const { data, error } = await supabase.rpc("get_place_flags", {
+    p_place_id: Number(placeId),
+  });
+  if (error) throw fromPostgrestError(error);
+  const arr = parseRpcPayload(data);
+  return Array.isArray(arr) ? arr : [];
+}
+
+export async function dismissPlaceFlagsRpc(placeId) {
+  if (!supabase) throw apiError("Supabase is not configured", 500);
+  const { error } = await supabase.rpc("dismiss_place_flags", {
+    p_place_id: Number(placeId),
+  });
+  if (error) throw fromPostgrestError(error);
 }
 
 export default PlaceFinder;

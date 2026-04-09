@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import PlaceFinder from "../../api/placesApi";
+import PlaceFinder, { addPlaceFlagRpc } from "../../api/placesApi";
 import { usePlacesContext } from "../../context/PlacesContext";
 import LocationAutocomplete from "./LocationAutocomplete";
 import PlaceContactFields from "./PlaceContactFields";
@@ -12,6 +12,7 @@ const UpdatePlace = ({
   placeId,
   onUpdated,
   onDeleted,
+  isAdmin = false,
 }) => {
   const { setPlaces } = usePlacesContext();
   const [name, setName] = useState("");
@@ -24,6 +25,10 @@ const UpdatePlace = ({
   const [reviewsDisabled, setReviewsDisabled] = useState(false);
   const [tagList, setTagList] = useState([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showFlagModal, setShowFlagModal] = useState(false);
+  const [flagReason, setFlagReason] = useState("");
+  const [flagSubmitting, setFlagSubmitting] = useState(false);
+  const [flagError, setFlagError] = useState("");
 
   const syncPlaceAfterTagChange = async () => {
     if (!placeId) return;
@@ -86,6 +91,10 @@ const UpdatePlace = ({
       setReviewsDisabled(false);
       setTagList([]);
       setShowDeleteConfirm(false);
+      setShowFlagModal(false);
+      setFlagReason("");
+      setFlagSubmitting(false);
+      setFlagError("");
     }
   }, [showModal]);
 
@@ -158,6 +167,37 @@ const UpdatePlace = ({
       e.preventDefault();
     }
     setShowDeleteConfirm(false);
+  };
+
+  const submitFlag = async (e) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    if (!placeId) return;
+    const trimmed = flagReason.trim();
+    if (!trimmed) {
+      setFlagError("Please describe why you are flagging this place.");
+      return;
+    }
+    setFlagError("");
+    setFlagSubmitting(true);
+    try {
+      await addPlaceFlagRpc(placeId, trimmed);
+      const res = await PlaceFinder.get(`/${placeId}`);
+      const placeRow = res.data.data.place;
+      onUpdated?.(placeRow);
+      setShowFlagModal(false);
+      setFlagReason("");
+    } catch (err) {
+      const msg =
+        err.response?.data?.message ||
+        err.message ||
+        "Could not submit flag.";
+      setFlagError(String(msg));
+    } finally {
+      setFlagSubmitting(false);
+    }
   };
 
   const confirmDelete = async (e) => {
@@ -370,14 +410,29 @@ const UpdatePlace = ({
                 </div>
               </div>
               <div className="modal-footer d-flex flex-wrap justify-content-between align-items-center gap-2">
-                <button
-                  type="button"
-                  className="btn btn-modern btn-danger-modern"
-                  onClick={() => setShowDeleteConfirm(true)}
-                >
-                  <i className="fas fa-trash me-2"></i>
-                  Delete place
-                </button>
+                {isAdmin ? (
+                  <button
+                    type="button"
+                    className="btn btn-modern btn-danger-modern"
+                    onClick={() => setShowDeleteConfirm(true)}
+                  >
+                    <i className="fas fa-trash me-2"></i>
+                    Delete place
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-modern btn-outline-danger"
+                    onClick={() => {
+                      setFlagError("");
+                      setFlagReason("");
+                      setShowFlagModal(true);
+                    }}
+                  >
+                    <i className="fas fa-flag me-2"></i>
+                    Flag
+                  </button>
+                )}
                 <div className="d-flex flex-wrap gap-2 ms-auto">
                   <button
                     type="button"
@@ -471,6 +526,112 @@ const UpdatePlace = ({
                     Delete
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </>
+      ) : null}
+
+      {showFlagModal ? (
+        <>
+          <div
+            className="modal-backdrop show"
+            onClick={() => {
+              setShowFlagModal(false);
+              setFlagReason("");
+              setFlagError("");
+            }}
+            style={{ opacity: 0.55, zIndex: 1060 }}
+          />
+          <div
+            className="modal show modern-modal"
+            style={{ display: "block", zIndex: 1070 }}
+            tabIndex={-1}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="update-place-flag-title"
+            onClick={(e) => {
+              if ((e.target as HTMLElement).classList.contains("modal")) {
+                setShowFlagModal(false);
+                setFlagReason("");
+                setFlagError("");
+              }
+            }}
+          >
+            <div
+              className="modal-dialog modal-dialog-centered"
+              role="document"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title" id="update-place-flag-title">
+                    <i className="fas fa-flag me-2"></i>
+                    Flag this place
+                  </h5>
+                  <button
+                    type="button"
+                    className="btn-close btn-close-white"
+                    onClick={() => {
+                      setShowFlagModal(false);
+                      setFlagReason("");
+                      setFlagError("");
+                    }}
+                    aria-label="Close"
+                  />
+                </div>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    submitFlag(e);
+                  }}
+                >
+                  <div className="modal-body">
+                    <p className="text-muted small mb-2">
+                      Admins will review your report. You can submit multiple
+                      reports if needed.
+                    </p>
+                    {flagError ? (
+                      <div className="alert alert-danger" role="alert">
+                        {flagError}
+                      </div>
+                    ) : null}
+                    <label htmlFor="update-place-flag-reason" className="form-label">
+                      Reason
+                    </label>
+                    <textarea
+                      id="update-place-flag-reason"
+                      className="form-control"
+                      rows={4}
+                      value={flagReason}
+                      onChange={(e) => setFlagReason(e.target.value)}
+                      placeholder="Describe the issue…"
+                      disabled={flagSubmitting}
+                      required
+                    />
+                  </div>
+                  <div className="modal-footer">
+                    <button
+                      type="button"
+                      className="btn btn-modern btn-secondary-modern"
+                      onClick={() => {
+                        setShowFlagModal(false);
+                        setFlagReason("");
+                        setFlagError("");
+                      }}
+                      disabled={flagSubmitting}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn btn-modern btn-primary-modern"
+                      disabled={flagSubmitting}
+                    >
+                      {flagSubmitting ? "Submitting…" : "Submit flag"}
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
           </div>

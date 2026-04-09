@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import PlaceFinder, { listPlaceListsPicker } from "../../api/placesApi";
 import { usePlacesContext } from "../../context/PlacesContext";
+import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import StarRating from "../../components/ui/StarRating";
 import TagInput from "../tags/TagInput";
@@ -16,11 +17,13 @@ import { setPlaceDragData } from "../../utils/placeDrag";
 
 const PlaceList = (props) => {
   const { places, setPlaces } = usePlacesContext();
+  const { isAdmin } = useAuth();
   let navigate = useNavigate(); // useNavigate function to navigate to place details page
   const [sortColumn, setSortColumn] = useState(null);
   const [sortDirection, setSortDirection] = useState('asc'); // 'asc' or 'desc'
   const [activeFilterTags, setActiveFilterTags] = useState([]);
   const [activeListIds, setActiveListIds] = useState([]);
+  const [showFlaggedOnly, setShowFlaggedOnly] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [placeLists, setPlaceLists] = useState([]);
   const [nameSearchOpen, setNameSearchOpen] = useState(false);
@@ -29,8 +32,14 @@ const PlaceList = (props) => {
   const nameSearchInputRef = useRef(null);
   const filtersWrapRef = useRef(null);
 
+  useEffect(() => {
+    if (!isAdmin && showFlaggedOnly) {
+      setShowFlaggedOnly(false);
+    }
+  }, [isAdmin, showFlaggedOnly]);
+
   const loadPlaces = useCallback(
-    async (tagsArray, listIdsArray) => {
+    async (tagsArray, listIdsArray, flaggedOnly) => {
       try {
         const tagList = Array.isArray(tagsArray) ? tagsArray : [];
         const listList = Array.isArray(listIdsArray) ? listIdsArray : [];
@@ -38,6 +47,7 @@ const PlaceList = (props) => {
           params: {
             ...(tagList.length > 0 ? { tag: tagList } : {}),
             ...(listList.length > 0 ? { list: listList } : {}),
+            ...(flaggedOnly ? { flaggedOnly: true } : {}),
           },
           paramsSerializer: {
             serialize: (params) => {
@@ -69,8 +79,12 @@ const PlaceList = (props) => {
   );
 
   useEffect(() => {
-    loadPlaces(activeFilterTags, activeListIds);
-  }, [activeFilterTags, activeListIds, loadPlaces]);
+    loadPlaces(
+      activeFilterTags,
+      activeListIds,
+      isAdmin && showFlaggedOnly
+    );
+  }, [activeFilterTags, activeListIds, loadPlaces, isAdmin, showFlaggedOnly]);
 
   const refreshPlaceLists = useCallback(async () => {
     try {
@@ -393,6 +407,26 @@ const PlaceList = (props) => {
                           </ul>
                         )}
                       </div>
+                      {isAdmin ? (
+                        <div className="place-tiles-filters-section">
+                          <h3
+                            className="place-tiles-filters-section-title"
+                            id="place-list-flagged-heading"
+                          >
+                            Admin
+                          </h3>
+                          <label className="place-tiles-filters-list-option d-block">
+                            <input
+                              type="checkbox"
+                              checked={showFlaggedOnly}
+                              onChange={() =>
+                                setShowFlaggedOnly((v) => !v)
+                              }
+                            />
+                            <span>Show flagged places only</span>
+                          </label>
+                        </div>
+                      ) : null}
                     </div>
                     <div className="place-tiles-filters-panel-footer">
                       <button
@@ -472,14 +506,21 @@ const PlaceList = (props) => {
             className={`place-tiles-filter-hint text-muted small mb-0${
               activeFilterTags.length === 0 &&
               activeListIds.length === 0 &&
-              !nameSearchApplied.trim()
+              !nameSearchApplied.trim() &&
+              !(isAdmin && showFlaggedOnly)
                 ? " visually-hidden"
                 : ""
             }`}
           >
             {activeFilterTags.length > 0 || activeListIds.length > 0 ? (
               <>
-                Showing places
+                {isAdmin && showFlaggedOnly ? (
+                  <>
+                    Showing <strong>only flagged</strong> places
+                  </>
+                ) : (
+                  "Showing places"
+                )}
                 {activeFilterTags.length > 0 ? (
                   <>
                     {" "}
@@ -520,11 +561,22 @@ const PlaceList = (props) => {
               </>
             ) : nameSearchApplied.trim() ? (
               <>
-                Showing places whose name contains{" "}
+                {isAdmin && showFlaggedOnly ? (
+                  <>
+                    Showing <strong>only flagged</strong> places whose name
+                    contains{" "}
+                  </>
+                ) : (
+                  "Showing places whose name contains "
+                )}
                 <span className="text-body">
                   &quot;{nameSearchApplied.trim()}&quot;
                 </span>
                 .
+              </>
+            ) : isAdmin && showFlaggedOnly ? (
+              <>
+                Showing <strong>only flagged</strong> places.
               </>
             ) : (
               <>
@@ -545,7 +597,9 @@ const PlaceList = (props) => {
                 ? "No places match that name."
                 : activeFilterTags.length > 0 || activeListIds.length > 0
                   ? "No places match these filters."
-                  : "No places to show."}
+                  : isAdmin && showFlaggedOnly
+                    ? "No flagged places."
+                    : "No places to show."}
             </p>
           ) : null}
           {displayPlaces &&
@@ -556,11 +610,22 @@ const PlaceList = (props) => {
               const hasNotes = Boolean(notesText);
               const notesTooltipFirstLine =
                 notesText.split(/\r?\n/, 1)[0].trim();
+              const flagCount = Number(place.flag_count) || 0;
+              const hasFlags = flagCount > 0;
               return (
                 <article
-                  className={`place-tile${hasNotes ? " place-tile--has-notes" : ""}`}
+                  className={`place-tile${hasNotes ? " place-tile--has-notes" : ""}${hasFlags ? " place-tile--has-flag" : ""}`}
                   key={place.id}
                 >
+                  {hasFlags ? (
+                    <span
+                      className="place-tile-flag-icon"
+                      title={`${flagCount} flag report${flagCount === 1 ? "" : "s"}`}
+                      aria-label="This place has been flagged"
+                    >
+                      <i className="fas fa-flag" aria-hidden />
+                    </span>
+                  ) : null}
                   <button
                     type="button"
                     className="place-tile-drag-handle"

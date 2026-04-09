@@ -1,5 +1,6 @@
 import React from "react";
 import UserMenu from "../auth/UserMenu";
+import EditAdminsControl from "../auth/EditAdminsControl";
 
 const Header = ({ onAddClick }) => {
   return (
@@ -10,6 +11,7 @@ const Header = ({ onAddClick }) => {
       </h1>
       <div className="modern-header-actions d-flex align-items-center flex-wrap gap-2">
         <UserMenu />
+        <EditAdminsControl />
         <button
           className="btn btn-primary-modern btn-lg"
           onClick={onAddClick}

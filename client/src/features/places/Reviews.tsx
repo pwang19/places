@@ -1,17 +1,28 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import PlaceFinder from "../../api/placesApi";
 import StarRating from "../../components/ui/StarRating";
 
-const Reviews = ({ reviews, placeId, onReviewsChanged, onEditReview }) => {
+function sortReviewsForDisplay(reviews) {
+  if (!reviews?.length) return [];
+  return [...reviews].sort((a, b) => {
+    const ao = a.owned_by_me ? 1 : 0;
+    const bo = b.owned_by_me ? 1 : 0;
+    if (bo !== ao) return bo - ao;
+    return Number(b.id) - Number(a.id);
+  });
+}
+
+const Reviews = ({ reviews, placeId, onReviewsChanged, onEditReview, isAdmin }) => {
   const [deletingId, setDeletingId] = useState(null);
+  const displayReviews = useMemo(() => sortReviewsForDisplay(reviews), [reviews]);
 
   const handleDelete = async (review) => {
     if (!placeId || !review?.id) return;
-    if (
-      !window.confirm(
-        "Delete this review? This cannot be undone."
-      )
-    ) {
+    const own = Boolean(review.owned_by_me);
+    const msg = own
+      ? "Delete this review? This cannot be undone."
+      : "Delete this review as an admin? This cannot be undone.";
+    if (!window.confirm(msg)) {
       return;
     }
     setDeletingId(review.id);
@@ -30,7 +41,7 @@ const Reviews = ({ reviews, placeId, onReviewsChanged, onEditReview }) => {
     }
   };
 
-  if (!reviews || reviews.length === 0) {
+  if (!displayReviews.length) {
     return (
       <div className="text-center py-5">
         <i className="fas fa-comment-slash fa-3x mb-3" style={{ color: "var(--border-color)" }}></i>
@@ -41,7 +52,7 @@ const Reviews = ({ reviews, placeId, onReviewsChanged, onEditReview }) => {
 
   return (
     <div className="row g-3">
-      {reviews.map((review) => {
+      {displayReviews.map((review) => {
         return (
           <div
             key={review.id}
@@ -89,7 +100,7 @@ const Reviews = ({ reviews, placeId, onReviewsChanged, onEditReview }) => {
                   {review.review}
                 </p>
               </div>
-              {review.owned_by_me ? (
+              {review.owned_by_me || isAdmin ? (
                 <div
                   className="card-footer d-flex flex-wrap gap-2 justify-content-end"
                   style={{
@@ -98,15 +109,17 @@ const Reviews = ({ reviews, placeId, onReviewsChanged, onEditReview }) => {
                     padding: "0.75rem 1.25rem",
                   }}
                 >
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-modern btn-warning-modern"
-                    onClick={() => onEditReview?.(review)}
-                    disabled={deletingId === review.id}
-                  >
-                    <i className="fas fa-edit me-1" aria-hidden />
-                    Edit
-                  </button>
+                  {review.owned_by_me ? (
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-modern btn-warning-modern"
+                      onClick={() => onEditReview?.(review)}
+                      disabled={deletingId === review.id}
+                    >
+                      <i className="fas fa-edit me-1" aria-hidden />
+                      Edit
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     className="btn btn-sm btn-modern btn-secondary-modern"

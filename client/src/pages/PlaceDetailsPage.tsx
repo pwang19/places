@@ -6,8 +6,11 @@ import StarRating from "../components/ui/StarRating";
 import Reviews from "../features/places/Reviews";
 import AddReview from "../features/places/AddReview";
 import UpdatePlace from "../features/places/UpdatePlace";
+import PlaceFlagsModal from "../features/places/PlaceFlagsModal";
 import PrivatePlaceNote from "../features/places/PrivatePlaceNote";
 import UserMenu from "../features/auth/UserMenu";
+import EditAdminsControl from "../features/auth/EditAdminsControl";
+import { useAuth } from "../context/AuthContext";
 import { normalizeTags } from "../utils/tags";
 import { formatPriceRangeDollars } from "../utils/priceRange";
 import { cleanStringList, websiteHref } from "../utils/contactInfo";
@@ -20,10 +23,12 @@ const googleMapsUrlForQuery = (query) =>
 const PlaceDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const { selectedPlace, setSelectedPlace, setPlaces } = usePlacesContext();
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showAddReviewModal, setShowAddReviewModal] = useState(false);
   const [editingReview, setEditingReview] = useState(null);
+  const [showFlagsModal, setShowFlagsModal] = useState(false);
 
   const closeReviewModal = () => {
     setShowAddReviewModal(false);
@@ -75,6 +80,9 @@ const PlaceDetailsPage = () => {
     : null;
 
   const reviewsDisabled = Boolean(selectedPlace?.place?.reviews_disabled);
+  const hasMyReview = Boolean(
+    selectedPlace?.reviews?.some((r) => r.owned_by_me)
+  );
 
   const detailPhone =
     selectedPlace?.place?.phone != null
@@ -90,6 +98,8 @@ const PlaceDetailsPage = () => {
     Boolean(detailPhone) ||
     detailEmails.length > 0 ||
     detailWebsites.length > 0;
+
+  const flagCount = Number(selectedPlace?.place?.flag_count) || 0;
 
   return (
     <div>
@@ -107,7 +117,8 @@ const PlaceDetailsPage = () => {
           <i className="fas fa-arrow-left me-2"></i>
           Back to Places
         </button>
-        <div className="ms-auto d-flex align-items-center flex-shrink-0">
+        <div className="ms-auto d-flex align-items-center flex-shrink-0 gap-2">
+          <EditAdminsControl />
           <UserMenu />
         </div>
       </div>
@@ -123,12 +134,31 @@ const PlaceDetailsPage = () => {
         showModal={showUpdateModal}
         onClose={() => setShowUpdateModal(false)}
         placeId={id}
+        isAdmin={isAdmin}
         onUpdated={(placeRow) => {
           mergePlaceIntoList(placeRow);
           reloadPlace();
         }}
         onDeleted={() => {
           setSelectedPlace(null);
+          setPlaces((prev) =>
+            prev.filter((p) => String(p.id) !== String(id))
+          );
+          navigate("/");
+        }}
+      />
+      <PlaceFlagsModal
+        showModal={showFlagsModal}
+        onClose={() => setShowFlagsModal(false)}
+        placeId={id}
+        placeName={selectedPlace?.place?.name}
+        isAdmin={isAdmin}
+        onFlagsChanged={reloadPlace}
+        onPlaceDeleted={() => {
+          setSelectedPlace(null);
+          setPlaces((prev) =>
+            prev.filter((p) => String(p.id) !== String(id))
+          );
           navigate("/");
         }}
       />
@@ -142,6 +172,24 @@ const PlaceDetailsPage = () => {
                   : ""
               }`}
             >
+              {flagCount > 0 ? (
+                <div
+                  className="alert alert-warning d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 w-100"
+                  role="status"
+                >
+                  <span className="mb-0 d-flex align-items-center">
+                    <i className="fas fa-flag text-danger me-2" aria-hidden />
+                    This place has been flagged for review.
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-dark flex-shrink-0"
+                    onClick={() => setShowFlagsModal(true)}
+                  >
+                    View Flag
+                  </button>
+                </div>
+              ) : null}
               <div className="place-details-title-row">
                 <h1 className="place-details-title-heading mb-0">
                   {selectedPlace.place.name}
@@ -305,24 +353,27 @@ const PlaceDetailsPage = () => {
                     </span>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={openAddReview}
-                  className="btn btn-modern btn-secondary-modern reviews-section-add-btn flex-shrink-0"
-                  style={{
-                    borderRadius: "12px",
-                    padding: "0.5rem 1.1rem",
-                    fontWeight: "600",
-                  }}
-                  title="Add a review"
-                >
-                  <i className="fas fa-plus-circle me-2"></i>
-                  Add Review
-                </button>
+                {!hasMyReview ? (
+                  <button
+                    type="button"
+                    onClick={openAddReview}
+                    className="btn btn-modern btn-secondary-modern reviews-section-add-btn flex-shrink-0"
+                    style={{
+                      borderRadius: "12px",
+                      padding: "0.5rem 1.1rem",
+                      fontWeight: "600",
+                    }}
+                    title="Add a review"
+                  >
+                    <i className="fas fa-plus-circle me-2"></i>
+                    Add Review
+                  </button>
+                ) : null}
               </div>
               <Reviews
                 reviews={selectedPlace.reviews}
                 placeId={id}
+                isAdmin={isAdmin}
                 onReviewsChanged={reloadPlace}
                 onEditReview={(r) => {
                   setShowAddReviewModal(false);

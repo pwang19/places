@@ -771,6 +771,17 @@ body {
   cursor: grabbing;
 }
 
+.place-tile-flag-icon {
+  position: absolute;
+  top: 0.45rem;
+  right: 2.75rem;
+  z-index: 5;
+  color: #dc3545;
+  font-size: 1rem;
+  line-height: 1;
+  pointer-events: none;
+}
+
 /* Home: list workbench + place grid */
 .home-lists-main-row {
   display: flex;

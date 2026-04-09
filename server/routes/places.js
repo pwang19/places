@@ -156,11 +156,12 @@ router.get(
       });
       return;
     }
-    const reviews = await db.query(
-      "SELECT * FROM reviews WHERE place_id = $1 ORDER BY id DESC",
-      [req.params.id]
-    );
     const currentSub = req.user.sub;
+    const reviews = await db.query(
+      `SELECT * FROM reviews WHERE place_id = $1
+       ORDER BY CASE WHEN user_sub IS NOT DISTINCT FROM $2::varchar THEN 0 ELSE 1 END, id DESC`,
+      [req.params.id, currentSub]
+    );
     const reviewsOut = reviews.rows.map((row) => reviewForClient(row, currentSub));
     res.status(200).json({
       status: "Success",
@@ -373,6 +374,16 @@ router.post(
       return res.status(403).json({
         status: "Error",
         message: "Reviews are disabled for this place",
+      });
+    }
+    const existing = await db.query(
+      "SELECT id FROM reviews WHERE place_id = $1 AND user_sub = $2 LIMIT 1",
+      [req.params.id, req.user.sub]
+    );
+    if (existing.rows.length > 0) {
+      return res.status(409).json({
+        status: "Error",
+        message: "You already have a review for this place. Edit or delete it to post again.",
       });
     }
     const { review, rating } = parseReviewBody(req.body);
