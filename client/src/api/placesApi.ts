@@ -2,6 +2,7 @@ import {
   isValidRatingInt,
   RATING_INVALID_MESSAGE,
 } from "@places/shared";
+import { FunctionsHttpError } from "@supabase/supabase-js";
 import { isSupabaseConfigured, supabase } from "../lib/supabaseClient";
 import { postingAsLabel } from "../utils/displayName";
 
@@ -47,71 +48,103 @@ function normalizeContactStringList(v) {
   return cleaned.length ? cleaned : null;
 }
 
+/** Session access_token for Edge Functions (explicit header avoids anon-key Bearer fallback). */
+async function accessTokenForFunctions() {
+  if (!supabase) return null;
+  const { error: guErr } = await supabase.auth.getUser();
+  if (guErr) return null;
+  const { error: refErr } = await supabase.auth.refreshSession();
+  if (refErr) {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token ?? null;
+  }
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token ?? null;
+}
+
+async function invokePrivateNote(functionPath, options) {
+  if (!supabase) throw apiError("Supabase is not configured", 500);
+  const anon = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  if (!anon) throw apiError("Supabase is not configured", 500);
+
+  const token = await accessTokenForFunctions();
+  if (!token) throw apiError("Not authenticated", 401);
+
+  const extraHeaders =
+    options?.headers && typeof options.headers === "object" && !Array.isArray(options.headers)
+      ? (options.headers as Record<string, string>)
+      : {};
+
+  const { data, error } = await supabase.functions.invoke(functionPath, {
+    ...options,
+    headers: {
+      ...extraHeaders,
+      Authorization: `Bearer ${token}`,
+      apikey: anon,
+    },
+  });
+  if (error) {
+    if (error instanceof FunctionsHttpError) {
+      const res = error.context;
+      let jo = {};
+      try {
+        jo = await res.json();
+      } catch {
+        jo = {};
+      }
+      const joRec = jo as Record<string, unknown>;
+      throw apiError(
+        String(joRec.error || joRec.message || "Private note request failed"),
+        res.status,
+        joRec
+      );
+    }
+    throw apiError(error.message || "Private note request failed", 500);
+  }
+  return data;
+}
+
 async function fetchPrivateNoteDecrypted(placeId) {
   if (!supabase) return null;
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return null;
-  const base = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, "");
-  const anon = import.meta.env.VITE_SUPABASE_ANON_KEY;
-  if (!base || !anon) return null;
-  const res = await fetch(
-    `${base}/functions/v1/private-note?place_id=${encodeURIComponent(String(placeId))}`,
-    {
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-        apikey: anon,
-      },
-    }
-  );
-  if (!res.ok) return null;
-  const j = await res.json().catch(() => ({}));
-  return j.note ?? null;
+  if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+    return null;
+  }
+  try {
+    const j = await invokePrivateNote(
+      `private-note?place_id=${encodeURIComponent(String(placeId))}`,
+      { method: "GET" }
+    );
+    return j?.note ?? null;
+  } catch {
+    return null;
+  }
 }
 
 async function privateNoteRequest(method, placeId, body = undefined) {
   if (!supabase) throw apiError("Supabase is not configured", 500);
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw apiError("Not authenticated", 401);
-  const base = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, "");
-  const anon = import.meta.env.VITE_SUPABASE_ANON_KEY;
-  if (!base || !anon) throw apiError("Supabase is not configured", 500);
-
-  const url =
-    method === "GET" || method === "DELETE"
-      ? `${base}/functions/v1/private-note?place_id=${encodeURIComponent(String(placeId))}`
-      : `${base}/functions/v1/private-note`;
-
-  const opts: RequestInit = {
-    method,
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      apikey: anon,
-      "Content-Type": "application/json",
-    },
-  };
-  if (method === "PUT" && body != null) {
-    opts.body = JSON.stringify({ place_id: Number(placeId), ...body });
+  if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+    throw apiError("Supabase is not configured", 500);
   }
 
-  const res = await fetch(url, opts);
-  const text = await res.text();
-  let j = {};
-  if (text) {
-    try {
-      j = JSON.parse(text);
-    } catch {
-      j = {};
-    }
-  }
-  if (!res.ok) {
-    const jo = j as Record<string, unknown>;
-    throw apiError(
-      String(jo.error || jo.message || "Private note request failed"),
-      res.status,
-      jo
+  if (method === "GET" || method === "DELETE") {
+    return invokePrivateNote(
+      `private-note?place_id=${encodeURIComponent(String(placeId))}`,
+      { method }
     );
   }
-  return j;
+
+  if (method === "PUT") {
+    return invokePrivateNote("private-note", {
+      method: "PUT",
+      body: { place_id: Number(placeId), ...body },
+    });
+  }
+
+  throw apiError("Unsupported method", 405);
 }
 
 function reviewForClient(row, myUserId) {

@@ -5,14 +5,15 @@ type EditAdminsModalProps = {
   showModal: boolean;
   onClose: () => void;
   onSaved: () => void | Promise<void>;
-  emailDomain: string;
+  /** Comma-separated domain list for help text, e.g. "acts2.network, places.local" */
+  allowedDomainsList: string;
 };
 
 export default function EditAdminsModal({
   showModal,
   onClose,
   onSaved,
-  emailDomain,
+  allowedDomainsList,
 }: EditAdminsModalProps) {
   const [text, setText] = useState("");
   const [loadError, setLoadError] = useState("");
@@ -152,8 +153,9 @@ export default function EditAdminsModal({
                   </div>
                 ) : null}
                 <p className="text-muted small mb-2">
-                  One username per line (the part before @{emailDomain}). The list
-                  must include at least one admin.
+                  One username per line (the part before @ in your email). Allowed
+                  domains: {allowedDomainsList}. The list must include at least one
+                  admin.
                 </p>
                 <label htmlFor="editAdminsTextarea" className="form-label visually-hidden">
                   Admin usernames

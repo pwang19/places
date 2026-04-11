@@ -7,6 +7,11 @@ import React, {
   useState,
 } from "react";
 import { isSupabaseConfigured, supabase } from "../lib/supabaseClient";
+import {
+  formatAllowedDomainsForMessage,
+  isEmailInAllowedDomains,
+  parseAllowedEmailDomains,
+} from "../utils/allowedEmailDomains";
 
 const AuthContext = createContext(null);
 
@@ -19,14 +24,12 @@ function mapSupabaseUser(u) {
   };
 }
 
-function allowedEmailDomain() {
-  return (import.meta.env.VITE_ALLOWED_EMAIL_DOMAIN || "acts2.network").toLowerCase();
+function allowedDomainsList() {
+  return parseAllowedEmailDomains(import.meta.env.VITE_ALLOWED_EMAIL_DOMAIN);
 }
 
 function isAllowedDomain(email) {
-  if (!email || typeof email !== "string") return false;
-  const domain = allowedEmailDomain();
-  return email.toLowerCase().endsWith(`@${domain}`);
+  return isEmailInAllowedDomains(email, allowedDomainsList());
 }
 
 async function fetchIsAdminFlag() {
@@ -34,6 +37,13 @@ async function fetchIsAdminFlag() {
   const { data, error } = await supabase.rpc("current_user_is_admin");
   if (error) return false;
   return Boolean(data);
+}
+
+function devEmailAuthEnabled() {
+  return (
+    Boolean(import.meta.env.DEV) &&
+    import.meta.env.VITE_DEV_EMAIL_AUTH === "true"
+  );
 }
 
 export function AuthProvider({ children }) {
@@ -134,9 +144,42 @@ export function AuthProvider({ children }) {
     const email = u?.email;
     if (!isAllowedDomain(email)) {
       await supabase.auth.signOut();
-      throw new Error(`Only @${allowedEmailDomain()} accounts may sign in`);
+      throw new Error(
+        `Only ${formatAllowedDomainsForMessage(allowedDomainsList())} accounts may sign in`
+      );
     }
     setUser(mapSupabaseUser(u));
+  }, []);
+
+  const loginWithEmailPassword = useCallback(async (email, password) => {
+    if (!devEmailAuthEnabled()) {
+      throw new Error("Email sign-in is not enabled");
+    }
+    if (!supabase) {
+      throw new Error("Supabase is not configured");
+    }
+    const trimmed = typeof email === "string" ? email.trim() : "";
+    if (!trimmed || !password) {
+      throw new Error("Email and password are required");
+    }
+    setMeError(null);
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: trimmed,
+      password,
+    });
+    if (error) {
+      throw new Error(error.message || "Sign-in failed");
+    }
+    const u = data.user || data.session?.user;
+    const userEmail = u?.email;
+    if (!isAllowedDomain(userEmail)) {
+      await supabase.auth.signOut();
+      throw new Error(
+        `Only ${formatAllowedDomainsForMessage(allowedDomainsList())} accounts may sign in`
+      );
+    }
+    setUser(mapSupabaseUser(u));
+    setIsAdmin(await fetchIsAdminFlag());
   }, []);
 
   const logout = useCallback(async () => {
@@ -156,9 +199,19 @@ export function AuthProvider({ children }) {
       refreshIsAdmin,
       refresh,
       loginWithCredential,
+      loginWithEmailPassword,
       logout,
     }),
-    [user, meError, isAdmin, refreshIsAdmin, refresh, loginWithCredential, logout]
+    [
+      user,
+      meError,
+      isAdmin,
+      refreshIsAdmin,
+      refresh,
+      loginWithCredential,
+      loginWithEmailPassword,
+      logout,
+    ]
   );
 
   return (

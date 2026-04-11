@@ -1,6 +1,10 @@
 # Link with: supabase link --project-ref <your-ref>
 # Apply SQL: supabase db push
-# Deploy function: supabase functions deploy private-note --no-verify-jwt  # omit --no-verify-jwt to enforce JWT at gateway
+# Deploy: supabase functions deploy private-note
+#
+# Gateway JWT verification is off for private-note: the Edge handler already
+# requires Authorization and runs supabase.auth.getUser(). Kong-level verify_jwt
+# often returns "Invalid JWT" for otherwise valid sessions (e.g. some token shapes).
 
 [functions.private-note]
-verify_jwt = true
+verify_jwt = false

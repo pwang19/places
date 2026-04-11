@@ -1,10 +1,7 @@
 import React, { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
+import { parseAllowedEmailDomains } from "../../utils/allowedEmailDomains";
 import EditAdminsModal from "./EditAdminsModal";
-
-function allowedEmailDomain() {
-  return (import.meta.env.VITE_ALLOWED_EMAIL_DOMAIN || "acts2.network").toLowerCase();
-}
 
 export default function EditAdminsControl() {
   const { isAdmin, refreshIsAdmin } = useAuth();
@@ -27,7 +24,9 @@ export default function EditAdminsControl() {
         showModal={showModal}
         onClose={() => setShowModal(false)}
         onSaved={refreshIsAdmin}
-        emailDomain={allowedEmailDomain()}
+        allowedDomainsList={parseAllowedEmailDomains(
+          import.meta.env.VITE_ALLOWED_EMAIL_DOMAIN
+        ).join(", ")}
       />
     </>
   );

@@ -18,14 +18,24 @@ const googleLoginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-function allowedEmailDomain() {
-  return (process.env.ALLOWED_EMAIL_DOMAIN || "acts2.network").toLowerCase();
+function allowedEmailDomains() {
+  const raw = process.env.ALLOWED_EMAIL_DOMAIN || "acts2.network";
+  return raw
+    .toLowerCase()
+    .split(",")
+    .map((d) => d.trim())
+    .filter(Boolean);
 }
 
 function isAllowedDomain(email) {
   if (!email || typeof email !== "string") return false;
-  const domain = allowedEmailDomain();
-  return email.toLowerCase().endsWith(`@${domain}`);
+  const lower = email.toLowerCase();
+  return allowedEmailDomains().some((domain) => lower.endsWith(`@${domain}`));
+}
+
+function allowedDomainsMessage() {
+  const domains = allowedEmailDomains();
+  return domains.map((d) => `@${d}`).join(" or ");
 }
 
 router.post(
@@ -51,7 +61,7 @@ router.post(
     if (!isAllowedDomain(payload.email)) {
       return res.status(403).json({
         status: "Error",
-        message: `Only @${allowedEmailDomain()} accounts may sign in`,
+        message: `Only ${allowedDomainsMessage()} accounts may sign in`,
       });
     }
     const token = signSessionPayload({

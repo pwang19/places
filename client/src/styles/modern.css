@@ -95,6 +95,11 @@ body {
   justify-content: center;
 }
 
+.auth-dev-form {
+  text-align: left;
+  margin-bottom: 1.25rem;
+}
+
 .auth-loading {
   margin: 0;
   color: var(--text-muted);
