@@ -1333,6 +1333,110 @@ body {
   }
 }
 
+/* Related places carousel (detail page) */
+.related-places-section {
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: var(--shadow-lg);
+  margin-bottom: 2rem;
+}
+
+.related-carousel {
+  position: relative;
+}
+
+.related-carousel-viewport {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  margin: 0 2.75rem;
+}
+
+.related-carousel-track {
+  display: flex;
+  gap: 1rem;
+  padding-bottom: 0.25rem;
+}
+
+.related-carousel-cell {
+  flex: 0 0 calc((100% - 2rem) / 3);
+  min-width: 0;
+}
+
+.related-carousel-card {
+  display: block;
+  height: 100%;
+  text-decoration: none;
+  color: inherit;
+  border-radius: 12px;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.related-carousel-card:hover {
+  text-decoration: none;
+  color: inherit;
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.related-carousel-card-title {
+  font-size: 1.05rem;
+}
+
+.related-carousel-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  background: var(--surface);
+  color: var(--text-heading);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+}
+
+.related-carousel-arrow:hover:not(:disabled) {
+  background: rgba(24, 144, 255, 0.12);
+  border-color: var(--primary);
+}
+
+.related-carousel-arrow:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.related-carousel-arrow--prev {
+  left: 0;
+}
+
+.related-carousel-arrow--next {
+  right: 0;
+}
+
+@media (max-width: 768px) {
+  .related-carousel-viewport {
+    margin: 0 2.25rem;
+  }
+
+  .related-carousel-cell {
+    flex: 0 0 calc((100% - 1rem) / 2);
+  }
+}
+
+@media (max-width: 480px) {
+  .related-carousel-cell {
+    flex: 0 0 85%;
+  }
+}
+
 /* Bootstrap list-group: match primary blue */
 .list-group-item.list-group-item-action.active {
   background-color: var(--primary);

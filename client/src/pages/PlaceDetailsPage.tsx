@@ -5,6 +5,7 @@ import { usePlacesContext } from "../context/PlacesContext";
 import StarRating from "../components/ui/StarRating";
 import Reviews from "../features/places/Reviews";
 import AddReview from "../features/places/AddReview";
+import RelatedPlacesCarousel from "../features/places/RelatedPlacesCarousel";
 import UpdatePlace from "../features/places/UpdatePlace";
 import PlaceFlagsModal from "../features/places/PlaceFlagsModal";
 import PrivatePlaceNote from "../features/places/PrivatePlaceNote";
@@ -100,6 +101,10 @@ const PlaceDetailsPage = () => {
     detailWebsites.length > 0;
 
   const flagCount = Number(selectedPlace?.place?.flag_count) || 0;
+
+  const relatedPlaces = Array.isArray(selectedPlace?.place?.related_places)
+    ? selectedPlace.place.related_places
+    : [];
 
   return (
     <div>
@@ -331,6 +336,9 @@ const PlaceDetailsPage = () => {
               onSaved={reloadPlace}
             />
           </div>
+          {relatedPlaces.length > 0 ? (
+            <RelatedPlacesCarousel places={relatedPlaces} />
+          ) : null}
           {!reviewsDisabled ? (
             <div className="reviews-section">
               <div className="reviews-section-header">

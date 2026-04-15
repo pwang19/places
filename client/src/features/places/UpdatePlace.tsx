@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import PlaceFinder, { addPlaceFlagRpc } from "../../api/placesApi";
 import { usePlacesContext } from "../../context/PlacesContext";
 import LocationAutocomplete from "./LocationAutocomplete";
@@ -24,21 +24,70 @@ const UpdatePlace = ({
   const [notes, setNotes] = useState("");
   const [reviewsDisabled, setReviewsDisabled] = useState(false);
   const [tagList, setTagList] = useState([]);
+  const [relatedPlaces, setRelatedPlaces] = useState<
+    { id: number | string; name: string; location?: string }[]
+  >([]);
+  const [pickerPlaces, setPickerPlaces] = useState<
+    { id: number | string; name: string }[]
+  >([]);
+  const [linkAddValue, setLinkAddValue] = useState("");
+  const [linkActionBusy, setLinkActionBusy] = useState(false);
+  const [linkError, setLinkError] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showFlagModal, setShowFlagModal] = useState(false);
   const [flagReason, setFlagReason] = useState("");
   const [flagSubmitting, setFlagSubmitting] = useState(false);
   const [flagError, setFlagError] = useState("");
 
-  const syncPlaceAfterTagChange = async () => {
+  const pullPlaceFromServer = async () => {
     if (!placeId) return;
     try {
       const res = await PlaceFinder.get(`/${placeId}`);
       const placeRow = res.data.data.place;
       setTagList(normalizeTags(placeRow.tags));
+      setRelatedPlaces(
+        Array.isArray(placeRow.related_places) ? placeRow.related_places : []
+      );
       onUpdated?.(placeRow);
     } catch (err) {
-      console.error("Error refreshing place after tag change:", err);
+      console.error("Error refreshing place:", err);
+    }
+  };
+
+  const syncPlaceAfterTagChange = async () => {
+    await pullPlaceFromServer();
+  };
+
+  const linkPickOptions = useMemo(() => {
+    const linked = new Set(relatedPlaces.map((r) => String(r.id)));
+    return pickerPlaces
+      .filter(
+        (p) => String(p.id) !== String(placeId) && !linked.has(String(p.id))
+      )
+      .slice()
+      .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  }, [pickerPlaces, relatedPlaces, placeId]);
+
+  const handleAddRelated = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    if (!val || !placeId) return;
+    setLinkActionBusy(true);
+    setLinkError("");
+    try {
+      await PlaceFinder.post(`/${placeId}/links`, {
+        related_place_id: Number(val),
+      });
+      await pullPlaceFromServer();
+      setLinkAddValue("");
+    } catch (err: unknown) {
+      const er = err as { response?: { data?: { message?: string } } };
+      const msg =
+        er?.response?.data?.message ||
+        (err instanceof Error ? err.message : null) ||
+        "Could not add link.";
+      setLinkError(String(msg));
+    } finally {
+      setLinkActionBusy(false);
     }
   };
 
@@ -47,8 +96,11 @@ const UpdatePlace = ({
     if (showModal && placeId) {
       const fetchData = async () => {
         try {
-          const response = await PlaceFinder.get(`/${placeId}`);
-          const place = response.data.data.place;
+          const [detailRes, listRes] = await Promise.all([
+            PlaceFinder.get(`/${placeId}`),
+            PlaceFinder.get("/"),
+          ]);
+          const place = detailRes.data.data.place;
           setName(place.name);
           setLocation(place.location);
           setPhone(place.phone != null ? String(place.phone) : "");
@@ -70,6 +122,13 @@ const UpdatePlace = ({
           setNotes(place.notes ?? "");
           setReviewsDisabled(Boolean(place.reviews_disabled));
           setTagList(normalizeTags(place.tags));
+          setRelatedPlaces(
+            Array.isArray(place.related_places) ? place.related_places : []
+          );
+          const listPayload = listRes?.data?.data?.places;
+          setPickerPlaces(Array.isArray(listPayload) ? listPayload : []);
+          setLinkAddValue("");
+          setLinkError("");
         } catch (err) {
           console.error("Error fetching place:", err);
         }
@@ -90,6 +149,11 @@ const UpdatePlace = ({
       setNotes("");
       setReviewsDisabled(false);
       setTagList([]);
+      setRelatedPlaces([]);
+      setPickerPlaces([]);
+      setLinkAddValue("");
+      setLinkActionBusy(false);
+      setLinkError("");
       setShowDeleteConfirm(false);
       setShowFlagModal(false);
       setFlagReason("");
@@ -349,6 +413,95 @@ const UpdatePlace = ({
                   >
                     Reviews disabled
                   </label>
+                </div>
+                <div className="mb-3">
+                  <label
+                    htmlFor="update-place-related-add"
+                    className="form-label d-block"
+                  >
+                    Related places
+                  </label>
+                  {relatedPlaces.length > 0 ? (
+                    <div className="d-flex flex-wrap gap-2 mb-2">
+                      {relatedPlaces.map((rp) => (
+                        <span
+                          key={String(rp.id)}
+                          className="badge rounded-pill d-inline-flex align-items-center gap-2"
+                          style={{
+                            background: "rgba(24, 144, 255, 0.12)",
+                            color: "var(--text-heading)",
+                            border: "1px solid var(--border-color)",
+                            fontSize: "0.85rem",
+                            padding: "0.4em 0.65em",
+                          }}
+                        >
+                          {rp.name}
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-link p-0 m-0"
+                            style={{
+                              lineHeight: 1,
+                              textDecoration: "none",
+                              color: "var(--text-muted)",
+                            }}
+                            title="Remove link"
+                            aria-label={`Unlink ${rp.name}`}
+                            disabled={linkActionBusy}
+                            onClick={async () => {
+                              setLinkActionBusy(true);
+                              setLinkError("");
+                              try {
+                                await PlaceFinder.delete(
+                                  `/${placeId}/links/${rp.id}`
+                                );
+                                await pullPlaceFromServer();
+                              } catch (err: unknown) {
+                                const er = err as {
+                                  response?: { data?: { message?: string } };
+                                };
+                                const msg =
+                                  er?.response?.data?.message ||
+                                  (err instanceof Error
+                                    ? err.message
+                                    : null) ||
+                                  "Could not remove link.";
+                                setLinkError(String(msg));
+                              } finally {
+                                setLinkActionBusy(false);
+                              }
+                            }}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-muted small mb-2">No related places yet.</p>
+                  )}
+                  <select
+                    id="update-place-related-add"
+                    className="form-select"
+                    value={linkAddValue}
+                    onChange={(e) => {
+                      void handleAddRelated(e);
+                    }}
+                    disabled={linkActionBusy || linkPickOptions.length === 0}
+                  >
+                    <option value="">
+                      {linkPickOptions.length === 0
+                        ? "No more places to link"
+                        : "Link another place…"}
+                    </option>
+                    {linkPickOptions.map((p) => (
+                      <option key={String(p.id)} value={String(p.id)}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                  {linkError ? (
+                    <p className="text-danger small mt-1 mb-0">{linkError}</p>
+                  ) : null}
                 </div>
                 <div className="mb-1">
                   <label className="form-label d-block">Tags</label>

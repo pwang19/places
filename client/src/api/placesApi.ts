@@ -191,6 +191,9 @@ async function getPlaceDetailMerged(placeId) {
   if (payload == null) throw apiError("Place not found", 404, { message: "Place not found" });
 
   const place = { ...payload.place };
+  if (!Array.isArray(place.related_places)) {
+    place.related_places = [];
+  }
   const reviews = Array.isArray(payload.reviews) ? payload.reviews : [];
   place.private_note = await fetchPrivateNoteDecrypted(placeId);
   return { place, reviews };
@@ -280,6 +283,22 @@ const PlaceFinder = {
       }
       const tagPayload = data && typeof data === "object" ? data : {};
       return { data: { status: "Success", data: { tag: tagPayload.tag } } };
+    }
+
+    const linksMatch = path.match(/^\/(\d+)\/links$/);
+    if (linksMatch) {
+      const placeId = Number(linksMatch[1]);
+      const relatedId = Number(body?.related_place_id);
+      if (!Number.isFinite(relatedId)) {
+        throw apiError("related_place_id is required", 400);
+      }
+      const { error } = await supabase.rpc("link_places", {
+        p_place_id: placeId,
+        p_related_place_id: relatedId,
+      });
+      if (error) throw fromPostgrestError(error);
+      const { place } = await getPlaceDetailMerged(placeId);
+      return { data: { status: "Success", data: { place } } };
     }
 
     const reviewMatch = path.match(/^\/(\d+)\/addReview$/);
@@ -417,6 +436,18 @@ const PlaceFinder = {
     if (privateNoteMatch) {
       await privateNoteRequest("DELETE", privateNoteMatch[1]);
       return { data: { status: "Success", message: "Private note removed" } };
+    }
+
+    const placeLinkMatch = path.match(/^\/(\d+)\/links\/(\d+)$/);
+    if (placeLinkMatch) {
+      const placeId = Number(placeLinkMatch[1]);
+      const relatedId = Number(placeLinkMatch[2]);
+      const { error } = await supabase.rpc("unlink_places", {
+        p_place_id: placeId,
+        p_related_place_id: relatedId,
+      });
+      if (error) throw fromPostgrestError(error);
+      return { data: { status: "Success", message: "Link removed" } };
     }
 
     const tagMatch = path.match(/^\/(\d+)\/tags\/(\d+)$/);
@@ -588,6 +619,24 @@ export async function addPlaceFlagRpc(placeId, reason) {
   const { error } = await supabase.rpc("add_place_flag", {
     p_place_id: Number(placeId),
     p_reason: String(reason ?? "").trim(),
+  });
+  if (error) throw fromPostgrestError(error);
+}
+
+export async function linkPlacesRpc(placeId, relatedPlaceId) {
+  if (!supabase) throw apiError("Supabase is not configured", 500);
+  const { error } = await supabase.rpc("link_places", {
+    p_place_id: Number(placeId),
+    p_related_place_id: Number(relatedPlaceId),
+  });
+  if (error) throw fromPostgrestError(error);
+}
+
+export async function unlinkPlacesRpc(placeId, relatedPlaceId) {
+  if (!supabase) throw apiError("Supabase is not configured", 500);
+  const { error } = await supabase.rpc("unlink_places", {
+    p_place_id: Number(placeId),
+    p_related_place_id: Number(relatedPlaceId),
   });
   if (error) throw fromPostgrestError(error);
 }
