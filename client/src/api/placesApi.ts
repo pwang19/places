@@ -148,6 +148,14 @@ async function privateNoteRequest(method, placeId, body = undefined) {
 }
 
 function reviewForClient(row, myUserId) {
+  const upvotes = Number(row.upvotes);
+  const downvotes = Number(row.downvotes);
+  const safeUp = Number.isFinite(upvotes) ? upvotes : 0;
+  const safeDown = Number.isFinite(downvotes) ? downvotes : 0;
+  const voteTotalRaw = Number(row.vote_total);
+  const vote_total = Number.isFinite(voteTotalRaw) ? voteTotalRaw : safeUp - safeDown;
+  const mv = row.my_vote;
+  const my_vote = mv === 1 || mv === -1 ? mv : null;
   return {
     id: row.id,
     place_id: row.place_id,
@@ -155,7 +163,32 @@ function reviewForClient(row, myUserId) {
     review: row.review,
     rating: row.rating,
     owned_by_me: Boolean(row.user_id && myUserId && row.user_id === myUserId),
+    upvotes: safeUp,
+    downvotes: safeDown,
+    vote_total,
+    my_vote,
   };
+}
+
+async function assertReviewOpenForVoting(placeId, reviewId, userId) {
+  if (!supabase) throw apiError("Supabase is not configured", 500);
+  const { data: rev, error: revErr } = await supabase
+    .from("reviews")
+    .select("id, place_id, user_id")
+    .eq("id", reviewId)
+    .maybeSingle();
+  if (revErr) throw fromPostgrestError(revErr);
+  if (!rev) throw apiError("Review not found", 404);
+  if (Number(rev.place_id) !== placeId) throw apiError("Review not found", 404);
+  if (rev.user_id === userId) throw apiError("Cannot vote on your own review", 403);
+  const { data: pl, error: plErr } = await supabase
+    .from("places")
+    .select("reviews_disabled")
+    .eq("id", placeId)
+    .maybeSingle();
+  if (plErr) throw fromPostgrestError(plErr);
+  if (!pl) throw apiError("Place not found", 404);
+  if (pl.reviews_disabled) throw apiError("Reviews are disabled for this place", 403);
 }
 
 async function listPlacesRpc(tagFilters, listFilters, flaggedOnly = false) {
@@ -353,6 +386,25 @@ const PlaceFinder = {
       };
     }
 
+    const reviewVoteMatch = path.match(/^\/(\d+)\/reviews\/(\d+)\/vote$/);
+    if (reviewVoteMatch) {
+      const placeId = Number(reviewVoteMatch[1]);
+      const reviewId = Number(reviewVoteMatch[2]);
+      const { data: { user }, error: uerr } = await supabase.auth.getUser();
+      if (uerr || !user) throw apiError("Not authenticated", 401);
+      const vote = Number(body?.vote);
+      if (vote !== 1 && vote !== -1) {
+        throw apiError("vote must be 1 (helpful) or -1 (unhelpful)", 400);
+      }
+      await assertReviewOpenForVoting(placeId, reviewId, user.id);
+      const { error } = await supabase.from("review_votes").upsert(
+        { review_id: reviewId, user_id: user.id, vote },
+        { onConflict: "review_id,user_id" }
+      );
+      if (error) throw fromPostgrestError(error);
+      return { data: { status: "Success", message: "Vote saved" } };
+    }
+
     throw apiError("Not found", 404);
   },
 
@@ -476,6 +528,22 @@ const PlaceFinder = {
       if (error) throw fromPostgrestError(error);
       if (!count) throw apiError("Review not found", 404);
       return { data: { status: "Success", message: "Review deleted" } };
+    }
+
+    const reviewVoteMatch = path.match(/^\/(\d+)\/reviews\/(\d+)\/vote$/);
+    if (reviewVoteMatch) {
+      const placeId = Number(reviewVoteMatch[1]);
+      const reviewId = Number(reviewVoteMatch[2]);
+      const { data: { user }, error: uerr } = await supabase.auth.getUser();
+      if (uerr || !user) throw apiError("Not authenticated", 401);
+      await assertReviewOpenForVoting(placeId, reviewId, user.id);
+      const { error } = await supabase
+        .from("review_votes")
+        .delete({ count: "exact" })
+        .eq("review_id", reviewId)
+        .eq("user_id", user.id);
+      if (error) throw fromPostgrestError(error);
+      return { data: { status: "Success", message: "Vote removed" } };
     }
 
     const placeMatch = path.match(/^\/(\d+)$/);

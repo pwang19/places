@@ -2,6 +2,15 @@ import React, { useMemo, useState } from "react";
 import PlaceFinder from "../../api/placesApi";
 import StarRating from "../../components/ui/StarRating";
 
+function reviewVoteLabel(review) {
+  const up = Number(review.upvotes) || 0;
+  const down = Number(review.downvotes) || 0;
+  if (up === 0 && down === 0) return "0";
+  const totalRaw = Number(review.vote_total);
+  const total = Number.isFinite(totalRaw) ? totalRaw : up - down;
+  return `${total} (+${up}/-${down})`;
+}
+
 function sortReviewsForDisplay(reviews) {
   if (!reviews?.length) return [];
   return [...reviews].sort((a, b) => {
@@ -14,6 +23,7 @@ function sortReviewsForDisplay(reviews) {
 
 const Reviews = ({ reviews, placeId, onReviewsChanged, onEditReview, isAdmin }) => {
   const [deletingId, setDeletingId] = useState(null);
+  const [votingId, setVotingId] = useState(null);
   const displayReviews = useMemo(() => sortReviewsForDisplay(reviews), [reviews]);
 
   const handleDelete = async (review) => {
@@ -38,6 +48,28 @@ const Reviews = ({ reviews, placeId, onReviewsChanged, onEditReview, isAdmin }) 
       window.alert(String(msg));
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleVotePress = async (review, vote) => {
+    if (!placeId || !review?.id || review.owned_by_me) return;
+    setVotingId(review.id);
+    try {
+      if (review.my_vote === vote) {
+        await PlaceFinder.delete(`/${placeId}/reviews/${review.id}/vote`);
+      } else {
+        await PlaceFinder.post(`/${placeId}/reviews/${review.id}/vote`, { vote });
+      }
+      await onReviewsChanged?.();
+    } catch (err) {
+      console.error(err);
+      const msg =
+        err.response?.data?.message ||
+        err.message ||
+        "Could not save your vote.";
+      window.alert(String(msg));
+    } finally {
+      setVotingId(null);
     }
   };
 
@@ -95,10 +127,72 @@ const Reviews = ({ reviews, placeId, onReviewsChanged, onEditReview, isAdmin }) 
                   <StarRating rating={review.rating} />
                 </span>
               </div>
-              <div className="card-body" style={{ padding: "1.25rem" }}>
-                <p className="card-text" style={{ color: "var(--text-primary)", margin: 0, lineHeight: "1.6" }}>
+              <div
+                className="card-body d-flex flex-column"
+                style={{ padding: "1.25rem", flex: "1 1 auto" }}
+              >
+                <p
+                  className="card-text"
+                  style={{
+                    color: "var(--text-primary)",
+                    margin: 0,
+                    lineHeight: "1.6",
+                    flex: "1 1 auto",
+                  }}
+                >
                   {review.review}
                 </p>
+                <div
+                  className="d-flex align-items-center justify-content-end flex-wrap gap-2 mt-3 pt-2"
+                  style={{ borderTop: "1px solid var(--border-color)" }}
+                >
+                  {!review.owned_by_me ? (
+                    votingId === review.id ? (
+                      <span className="spinner-border spinner-border-sm text-secondary" role="status" />
+                    ) : (
+                      <div className="btn-group btn-group-sm" role="group" aria-label="Review helpful votes">
+                        <button
+                          type="button"
+                          className={`btn btn-sm ${
+                            review.my_vote === 1 ? "btn-success" : "btn-outline-secondary"
+                          }`}
+                          style={
+                            review.my_vote === 1
+                              ? undefined
+                              : { borderColor: "var(--border-color)", color: "var(--text-primary)" }
+                          }
+                          aria-pressed={review.my_vote === 1}
+                          title="Helpful"
+                          onClick={() => handleVotePress(review, 1)}
+                        >
+                          <i className="fas fa-thumbs-up" aria-hidden />
+                        </button>
+                        <button
+                          type="button"
+                          className={`btn btn-sm ${
+                            review.my_vote === -1 ? "btn-danger" : "btn-outline-secondary"
+                          }`}
+                          style={
+                            review.my_vote === -1
+                              ? undefined
+                              : { borderColor: "var(--border-color)", color: "var(--text-primary)" }
+                          }
+                          aria-pressed={review.my_vote === -1}
+                          title="Unhelpful"
+                          onClick={() => handleVotePress(review, -1)}
+                        >
+                          <i className="fas fa-thumbs-down" aria-hidden />
+                        </button>
+                      </div>
+                    )
+                  ) : null}
+                  <span
+                    className="small text-nowrap"
+                    style={{ color: "var(--text-muted)", fontVariantNumeric: "tabular-nums" }}
+                  >
+                    {reviewVoteLabel(review)}
+                  </span>
+                </div>
               </div>
               {review.owned_by_me || isAdmin ? (
                 <div
