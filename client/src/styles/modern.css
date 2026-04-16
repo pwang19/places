@@ -445,6 +445,10 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
+.place-tiles-table-wrap.place-tiles-table-wrap--menu-open {
+  overflow: visible;
+}
+
 .place-tiles-table.modern-table {
   table-layout: fixed;
   width: 100%;
@@ -493,6 +497,11 @@ body {
   min-width: 0;
 }
 
+/* Open column menu must stack above sibling th cells (later columns paint on top by default) */
+.place-tiles-table.modern-table thead th.place-tiles-th-menu-open {
+  z-index: 100;
+}
+
 .place-tiles-col-sort-btn {
   display: inline-flex;
   align-items: center;
@@ -514,6 +523,92 @@ body {
 
 .place-tiles-col-sort-btn:hover {
   opacity: 0.92;
+}
+
+.place-tiles-col-sort-btn.has-col-filter::after {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 0.25rem;
+  border-radius: 50%;
+  background: var(--primary);
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.place-tiles-col-head-cell {
+  position: relative;
+  min-width: 0;
+}
+
+.place-tiles-col-menu-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 70;
+  min-width: 14rem;
+  max-width: min(22rem, calc(100vw - 2rem));
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: var(--shadow-xl);
+  padding: 0.35rem 0;
+  /* Popover is inside thead th (light text on blue); reset for surface panel */
+  color: var(--text-primary);
+  text-transform: none;
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: normal;
+}
+
+.place-tiles-col-menu-panel .form-label,
+.place-tiles-col-menu-panel label {
+  color: var(--text-heading);
+  text-transform: none;
+}
+
+.place-tiles-col-menu-panel .text-muted {
+  color: var(--text-muted);
+}
+
+.place-tiles-col-menu-panel .form-control {
+  color: var(--text-primary);
+}
+
+.place-tiles-col-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.9rem;
+  color: var(--text-heading);
+  cursor: pointer;
+}
+
+.place-tiles-col-menu-item:hover {
+  background: var(--surface-hover);
+}
+
+.place-tiles-col-menu-divider {
+  height: 1px;
+  background: var(--surface-muted);
+  margin: 0.35rem 0;
+}
+
+.place-tiles-col-menu-filter {
+  padding: 0 0.65rem 0.35rem;
+}
+
+.place-tiles-col-filter-field .place-tiles-col-filter-clear {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.place-tiles-col-filter-price-row label {
+  cursor: pointer;
 }
 
 .place-tiles-td-drag {
@@ -905,6 +1000,33 @@ body {
   grid-column: 1 / -1;
   text-align: center;
   padding: 2rem 1rem;
+}
+
+.place-tiles-empty--table {
+  grid-column: unset;
+  padding: 0.75rem 0.5rem;
+}
+
+.place-tiles-table-empty-cell {
+  text-align: center;
+  vertical-align: middle;
+  border: none;
+  padding: 2rem 1rem;
+}
+
+.place-tiles-table-empty-row td {
+  border-bottom: none;
+}
+
+.place-tiles-table.modern-table tbody tr.place-tiles-table-empty-row,
+.place-tiles-table.modern-table tbody tr.place-tiles-table-empty-row:hover {
+  cursor: default;
+  transform: none;
+  box-shadow: none;
+}
+
+.place-tiles-table.modern-table tbody tr.place-tiles-table-empty-row:hover {
+  background: var(--surface);
 }
 
 .place-tile {
