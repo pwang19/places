@@ -404,6 +404,178 @@ body {
   overflow: visible;
 }
 
+.place-tiles-view-toggle {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--surface-muted);
+  flex-shrink: 0;
+}
+
+.place-tiles-view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  border: none;
+  background: transparent;
+  color: var(--text-heading);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.place-tiles-view-btn:hover {
+  background: var(--surface-hover);
+}
+
+.place-tiles-view-btn.is-active {
+  background: var(--surface);
+  color: var(--primary-active);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.place-tiles-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.place-tiles-table.modern-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.place-tiles-table.modern-table thead th {
+  position: relative;
+}
+
+.place-tiles-col-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 12px;
+  margin-right: -6px;
+  cursor: col-resize;
+  z-index: 6;
+  touch-action: none;
+}
+
+.place-tiles-col-resizer:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.place-tiles-col-header-plain {
+  display: block;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+}
+
+.place-tiles-table.modern-table thead th.place-tiles-th-drag {
+  width: 2.75rem;
+  min-width: 2.75rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.place-tiles-table.modern-table thead th.place-tiles-th-notes {
+  min-width: 0;
+}
+
+.place-tiles-col-sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.place-tiles-col-sort-btn:hover {
+  opacity: 0.92;
+}
+
+.place-tiles-td-drag {
+  width: 2.75rem;
+  min-width: 2.75rem;
+  vertical-align: middle;
+  text-align: left;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+.place-tiles-td-notes {
+  min-width: 0;
+  vertical-align: top;
+  color: var(--text-primary);
+}
+
+.place-tiles-table-notes-preview {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: help;
+}
+
+.place-tiles-table-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.place-tiles-table-flag {
+  color: var(--danger, #dc3545);
+  flex-shrink: 0;
+}
+
+.place-tiles-table-name-text {
+  font-weight: 600;
+  min-width: 0;
+}
+
+.place-tiles-table-location {
+  min-width: 0;
+  word-break: break-word;
+}
+
+.place-tiles-table-rating.rating-display {
+  flex-wrap: wrap;
+}
+
+.place-tile-tags--table {
+  min-width: 0;
+}
+
+.place-tiles-table.modern-table tbody tr.place-tiles-table-row {
+  cursor: pointer;
+}
+
 .place-tiles-filters-wrap {
   position: relative;
   display: inline-flex;
@@ -774,6 +946,16 @@ body {
 
 .place-tile-drag-handle:active {
   cursor: grabbing;
+}
+
+/* Must come after .place-tile-drag-handle — same specificity would otherwise lose to `position: absolute` */
+.place-tile-drag-handle.place-tile-drag-handle--table {
+  position: static;
+  top: auto;
+  right: auto;
+  left: auto;
+  z-index: auto;
+  margin: 0;
 }
 
 .place-tile-flag-icon {

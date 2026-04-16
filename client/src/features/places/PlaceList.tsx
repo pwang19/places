@@ -13,14 +13,84 @@ import StarRating from "../../components/ui/StarRating";
 import TagInput from "../tags/TagInput";
 import { normalizeTags } from "../../utils/tags";
 import { formatPriceRangeDollars } from "../../utils/priceRange";
+import { cityStateFromLocation } from "../../utils/locationDisplay";
 import { setPlaceDragData } from "../../utils/placeDrag";
+
+const LIST_VIEW_STORAGE_KEY = "places-list-view-mode";
+
+function readStoredListView() {
+  try {
+    const v = localStorage.getItem(LIST_VIEW_STORAGE_KEY);
+    if (v === "column" || v === "tile") return v;
+  } catch {
+    /* ignore */
+  }
+  return "column";
+}
+
+function tagsSortKey(place) {
+  const names = normalizeTags(place.tags)
+    .map((t) => String(t.name || "").trim().toLowerCase())
+    .filter(Boolean)
+    .sort();
+  return names.length ? names.join("\u0001") : "\uffff";
+}
+
+const PLACES_COL_WIDTHS_KEY = "places-table-col-weights";
+const COL_COUNT = 7;
+const DEFAULT_COL_WEIGHTS = [0.05, 0.15, 0.2, 0.17, 0.09, 0.12, 0.22];
+const MIN_COL_FR = [0.035, 0.07, 0.09, 0.07, 0.05, 0.07, 0.09];
+
+function normalizeColWeights(w) {
+  const s = w.reduce((a, b) => a + b, 0);
+  if (s <= 0) return [...DEFAULT_COL_WEIGHTS];
+  return w.map((x) => x / s);
+}
+
+function readStoredColWeights() {
+  try {
+    const raw = localStorage.getItem(PLACES_COL_WIDTHS_KEY);
+    if (!raw) return normalizeColWeights(DEFAULT_COL_WEIGHTS);
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr) || arr.length !== COL_COUNT) {
+      return normalizeColWeights(DEFAULT_COL_WEIGHTS);
+    }
+    const nums = arr.map((x) => Number(x));
+    if (nums.some((n) => !Number.isFinite(n) || n <= 0)) {
+      return normalizeColWeights(DEFAULT_COL_WEIGHTS);
+    }
+    return normalizeColWeights(nums);
+  } catch {
+    return normalizeColWeights(DEFAULT_COL_WEIGHTS);
+  }
+}
+
+const PLACE_LIST_SORT_SPEC = [
+  { key: "name", label: "Place name" },
+  { key: "location", label: "Location" },
+  { key: "price_range", label: "Price" },
+  { key: "ratings", label: "Rating" },
+  { key: "tags", label: "Tags" },
+];
+
+const PLACE_TABLE_HEADER_SPEC = [
+  { role: "drag" },
+  { role: "sort", sortKey: "name", label: "Place name" },
+  { role: "plain", label: "Public notes" },
+  ...PLACE_LIST_SORT_SPEC.filter((c) => c.key !== "name").map((c) => ({
+    role: "sort",
+    sortKey: c.key,
+    label: c.label,
+  })),
+];
 
 const PlaceList = (props) => {
   const { places, setPlaces } = usePlacesContext();
   const { isAdmin } = useAuth();
   let navigate = useNavigate(); // useNavigate function to navigate to place details page
-  const [sortColumn, setSortColumn] = useState(null);
-  const [sortDirection, setSortDirection] = useState('asc'); // 'asc' or 'desc'
+  const [listViewMode, setListViewMode] = useState(readStoredListView);
+  const [sortColumn, setSortColumn] = useState("name");
+  const [sortDirection, setSortDirection] = useState("asc"); // 'asc' or 'desc'
   const [activeFilterTags, setActiveFilterTags] = useState([]);
   const [activeListIds, setActiveListIds] = useState([]);
   const [showFlaggedOnly, setShowFlaggedOnly] = useState(false);
@@ -31,12 +101,91 @@ const PlaceList = (props) => {
   const [nameSearchApplied, setNameSearchApplied] = useState("");
   const nameSearchInputRef = useRef(null);
   const filtersWrapRef = useRef(null);
+  const tableWrapRef = useRef(null);
+  const [colWeights, setColWeights] = useState(readStoredColWeights);
+  const latestWeightsRef = useRef(colWeights);
+  const resizeSessionRef = useRef(null);
+  const colWeightsRef = useRef(colWeights);
+  colWeightsRef.current = colWeights;
+
+  useEffect(() => {
+    latestWeightsRef.current = colWeights;
+  }, [colWeights]);
+
+  useEffect(() => {
+    const onMove = (e) => {
+      const sess = resizeSessionRef.current;
+      if (!sess || !tableWrapRef.current) return;
+      const wEl = tableWrapRef.current.offsetWidth;
+      if (wEl < 40) return;
+      const deltaFr = (e.clientX - sess.startX) / wEl;
+      const i = sess.boundaryIndex;
+      const sw = sess.startWeights;
+      const minA = MIN_COL_FR[i];
+      const minB = MIN_COL_FR[i + 1];
+      let na = sw[i] + deltaFr;
+      let nb = sw[i + 1] - deltaFr;
+      if (na < minA) {
+        na = minA;
+        nb = sw[i] + sw[i + 1] - minA;
+      } else if (nb < minB) {
+        nb = minB;
+        na = sw[i] + sw[i + 1] - minB;
+      }
+      if (na < minA || nb < minB) return;
+      const next = [...sw];
+      next[i] = na;
+      next[i + 1] = nb;
+      latestWeightsRef.current = next;
+      setColWeights(next);
+    };
+    const onUp = () => {
+      if (!resizeSessionRef.current) return;
+      resizeSessionRef.current = null;
+      document.body.style.removeProperty("cursor");
+      document.body.style.removeProperty("user-select");
+      try {
+        localStorage.setItem(
+          PLACES_COL_WIDTHS_KEY,
+          JSON.stringify(latestWeightsRef.current)
+        );
+      } catch {
+        /* ignore */
+      }
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+    return () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+  }, []);
+
+  const handleColResizeStart = useCallback((e, boundaryIndex) => {
+    e.preventDefault();
+    e.stopPropagation();
+    resizeSessionRef.current = {
+      boundaryIndex,
+      startX: e.clientX,
+      startWeights: [...colWeightsRef.current],
+    };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  }, []);
 
   useEffect(() => {
     if (!isAdmin && showFlaggedOnly) {
       setShowFlaggedOnly(false);
     }
   }, [isAdmin, showFlaggedOnly]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LIST_VIEW_STORAGE_KEY, listViewMode);
+    } catch {
+      /* ignore */
+    }
+  }, [listViewMode]);
 
   const loadPlaces = useCallback(
     async (tagsArray, listIdsArray, flaggedOnly) => {
@@ -191,6 +340,14 @@ const PlaceList = (props) => {
           aValue = a.average_rating != null ? parseFloat(a.average_rating) : 0;
           bValue = b.average_rating != null ? parseFloat(b.average_rating) : 0;
           break;
+        case 'location':
+          aValue = (a.location || "").toLowerCase();
+          bValue = (b.location || "").toLowerCase();
+          break;
+        case 'tags':
+          aValue = tagsSortKey(a);
+          bValue = tagsSortKey(b);
+          break;
         default:
           return 0;
       }
@@ -265,18 +422,46 @@ const PlaceList = (props) => {
             aria-label="Sort and filter places"
           >
             <div className="place-tiles-sort-bar-main">
-              <span className="place-tiles-sort-label">Sort by</span>
-              {["name", "price_range", "ratings"].map((column) => (
+              <div
+                className="place-tiles-view-toggle"
+                role="group"
+                aria-label="Places list layout"
+              >
                 <button
-                  key={column}
                   type="button"
-                  className={`place-tiles-sort-btn${sortColumn === column ? " is-active" : ""}`}
-                  onClick={(e) => handleSortClick(e, column)}
+                  className={`place-tiles-view-btn${listViewMode === "column" ? " is-active" : ""}`}
+                  aria-pressed={listViewMode === "column"}
+                  onClick={() => setListViewMode("column")}
                 >
-                  {sortLabels[column]}
-                  {getSortIcon(column)}
+                  <i className="fas fa-columns" aria-hidden />
+                  Columns
                 </button>
-              ))}
+                <button
+                  type="button"
+                  className={`place-tiles-view-btn${listViewMode === "tile" ? " is-active" : ""}`}
+                  aria-pressed={listViewMode === "tile"}
+                  onClick={() => setListViewMode("tile")}
+                >
+                  <i className="fas fa-th-large" aria-hidden />
+                  Tiles
+                </button>
+              </div>
+              {listViewMode === "tile" ? (
+                <>
+                  <span className="place-tiles-sort-label">Sort by</span>
+                  {["name", "price_range", "ratings"].map((column) => (
+                    <button
+                      key={column}
+                      type="button"
+                      className={`place-tiles-sort-btn${sortColumn === column ? " is-active" : ""}`}
+                      onClick={(e) => handleSortClick(e, column)}
+                    >
+                      {sortLabels[column]}
+                      {getSortIcon(column)}
+                    </button>
+                  ))}
+                </>
+              ) : null}
               <div
                 className="place-tiles-filters-wrap place-tiles-filter-section-start"
                 ref={filtersWrapRef}
@@ -588,22 +773,21 @@ const PlaceList = (props) => {
             )}
           </p>
         </div>
-        <div className="place-tiles-grid">
-          {!displayPlaces || displayPlaces.length === 0 ? (
-            <p className="place-tiles-empty text-muted mb-0">
-              {sortedPlaces &&
-              sortedPlaces.length > 0 &&
-              nameSearchApplied.trim()
-                ? "No places match that name."
-                : activeFilterTags.length > 0 || activeListIds.length > 0
-                  ? "No places match these filters."
-                  : isAdmin && showFlaggedOnly
-                    ? "No flagged places."
-                    : "No places to show."}
-            </p>
-          ) : null}
-          {displayPlaces &&
-            displayPlaces.map((place) => {
+        {!displayPlaces || displayPlaces.length === 0 ? (
+          <p className="place-tiles-empty text-muted mb-0">
+            {sortedPlaces &&
+            sortedPlaces.length > 0 &&
+            nameSearchApplied.trim()
+              ? "No places match that name."
+              : activeFilterTags.length > 0 || activeListIds.length > 0
+                ? "No places match these filters."
+                : isAdmin && showFlaggedOnly
+                  ? "No flagged places."
+                  : "No places to show."}
+          </p>
+        ) : listViewMode === "tile" ? (
+          <div className="place-tiles-grid">
+            {displayPlaces.map((place) => {
               const tags = normalizeTags(place.tags);
               const priceLabel = formatPriceRangeDollars(place.price_range);
               const notesText = place.notes?.trim() || "";
@@ -714,7 +898,209 @@ const PlaceList = (props) => {
                 </article>
               );
             })}
-        </div>
+          </div>
+        ) : (
+          <div className="place-tiles-table-wrap" ref={tableWrapRef}>
+            <table className="modern-table place-tiles-table">
+              <colgroup>
+                {colWeights.map((fr, i) => (
+                  <col key={i} style={{ width: `${fr * 100}%` }} />
+                ))}
+              </colgroup>
+              <thead>
+                <tr>
+                  {PLACE_TABLE_HEADER_SPEC.map((spec, colIndex) => {
+                    const thKey =
+                      spec.role === "drag"
+                        ? "drag"
+                        : spec.role === "plain"
+                          ? "notes"
+                          : spec.sortKey;
+                    const showResizer = colIndex < PLACE_TABLE_HEADER_SPEC.length - 1;
+                    return (
+                      <th
+                        key={thKey}
+                        className={
+                          spec.role === "drag"
+                            ? "place-tiles-th-drag"
+                            : spec.role === "plain"
+                              ? "place-tiles-th-notes"
+                              : ""
+                        }
+                        scope="col"
+                        aria-label={
+                          spec.role === "drag" ? "Drag into list" : undefined
+                        }
+                      >
+                        {spec.role === "drag" ? null : spec.role === "plain" ? (
+                          <span className="place-tiles-col-header-plain">
+                            {spec.label}
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            className="place-tiles-col-sort-btn"
+                            onClick={(e) =>
+                              handleSortClick(e, spec.sortKey)
+                            }
+                          >
+                            {spec.label}
+                            {getSortIcon(spec.sortKey)}
+                          </button>
+                        )}
+                        {showResizer ? (
+                          <div
+                            className="place-tiles-col-resizer"
+                            role="separator"
+                            aria-orientation="vertical"
+                            aria-label={`Resize after ${spec.role === "drag" ? "drag" : spec.role === "plain" ? "public notes" : spec.label}`}
+                            onMouseDown={(e) =>
+                              handleColResizeStart(e, colIndex)
+                            }
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        ) : null}
+                      </th>
+                    );
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                {displayPlaces.map((place) => {
+                  const tags = normalizeTags(place.tags);
+                  const priceLabel = formatPriceRangeDollars(place.price_range);
+                  const flagCount = Number(place.flag_count) || 0;
+                  const hasFlags = flagCount > 0;
+                  const notesText = place.notes?.trim() || "";
+                  const hasNotes = Boolean(notesText);
+                  return (
+                    <tr
+                      key={place.id}
+                      className={`place-tiles-table-row${hasNotes ? " place-tiles-table-row--notes" : ""}${hasFlags ? " place-tiles-table-row--flag" : ""}`}
+                      onClick={() => handlePlaceSelect(place.id)}
+                      tabIndex={0}
+                      role="link"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handlePlaceSelect(place.id);
+                        }
+                      }}
+                    >
+                      <td className="place-tiles-td-drag">
+                        <button
+                          type="button"
+                          className="place-tile-drag-handle place-tile-drag-handle--table"
+                          draggable
+                          title="Drag into list (left)"
+                          aria-label={`Drag ${place.name || "place"} to add to a list`}
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                          onDragStart={(e) => {
+                            e.stopPropagation();
+                            setPlaceDragData(e.dataTransfer, {
+                              id: place.id,
+                              name: place.name,
+                              location: place.location,
+                              price_range: place.price_range ?? null,
+                            });
+                            e.dataTransfer.effectAllowed = "copy";
+                          }}
+                        >
+                          <i className="fas fa-grip-vertical" aria-hidden />
+                        </button>
+                      </td>
+                      <td>
+                        <div className="place-tiles-table-name-cell">
+                          {hasFlags ? (
+                            <span
+                              className="place-tiles-table-flag"
+                              title={`${flagCount} flag report${flagCount === 1 ? "" : "s"}`}
+                              aria-label="This place has been flagged"
+                            >
+                              <i className="fas fa-flag" aria-hidden />
+                            </span>
+                          ) : null}
+                          <span className="place-tiles-table-name-text">
+                            {place.name}
+                          </span>
+                        </div>
+                      </td>
+                      <td
+                        className="place-tiles-td-notes"
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
+                      >
+                        {hasNotes ? (
+                          <div
+                            className="place-tiles-table-notes-preview"
+                            title={notesText}
+                          >
+                            {(notesText.split(/\r?\n/, 1)[0] ?? "").trim() ||
+                              "—"}
+                          </div>
+                        ) : (
+                          <span className="text-muted">—</span>
+                        )}
+                      </td>
+                      <td
+                        title={
+                          place.location?.trim()
+                            ? place.location.trim()
+                            : undefined
+                        }
+                      >
+                        <span className="place-tiles-table-location">
+                          {place.location?.trim() ? (
+                            cityStateFromLocation(place.location)
+                          ) : (
+                            <span className="text-muted">—</span>
+                          )}
+                        </span>
+                      </td>
+                      <td>
+                        {priceLabel ? (
+                          priceLabel
+                        ) : (
+                          <span className="text-muted">—</span>
+                        )}
+                      </td>
+                      <td>
+                        {!place.reviews_disabled ? (
+                          <div className="place-tiles-table-rating rating-display">
+                            {renderRating(place)}
+                          </div>
+                        ) : (
+                          <span className="text-muted small">—</span>
+                        )}
+                      </td>
+                      <td>
+                        <div
+                          className="place-tile-tags place-tile-tags--table"
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                        >
+                          {tags.length === 0 ? (
+                            <span className="text-muted small">No tags</span>
+                          ) : (
+                            tags.map((t) => (
+                              <span
+                                key={t.id}
+                                className="place-tile-tag badge rounded-pill"
+                              >
+                                {t.name}
+                              </span>
+                            ))
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
     </>
