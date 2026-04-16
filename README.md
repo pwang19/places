@@ -57,7 +57,8 @@ chmod +x start.sh   # first time only
 - **Build:** `npm run build -w client`  
 - **Output:** `client/dist` (not `build`)  
 - Set **`VITE_*`** variables in the host (see [`client/.env.production.example`](client/.env.production.example)).  
-- SPA fallback: [`client/public/_redirects`](client/public/_redirects).
+- **Cloudflare Pages:** SPA routing is automatic when there is no top-level `404.html` (Vite build has none). Do not add `/* /index.html 200` in `_redirects` — Cloudflare flags it as an infinite loop.
+- **Netlify:** [`client/netlify.toml`](client/netlify.toml) provides the same fallback.
 
 ## Legacy Express API (optional)
 

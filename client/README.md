@@ -41,7 +41,8 @@ From the **repo root**:
 - **Root directory:** `client` (or build from monorepo root with `npm run build -w client` and publish `client/dist`)
 - **Build output:** `dist` (not `build`)
 - Set the same `VITE_*` variables in the host environment. See [`.env.production.example`](.env.production.example).
-- SPA fallback: [`public/_redirects`](public/_redirects).
+- **Cloudflare Pages:** no extra file — SPA fallback when no root `404.html`.
+- **Netlify:** [`netlify.toml`](netlify.toml).
 
 ## Layout
 
