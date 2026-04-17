@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from "react";
-import PlaceFinder from "../../api/placesApi";
+import PlaceFinder, {
+  getDecryptedPrivateNoteForPlace,
+} from "../../api/placesApi";
 
-const PrivatePlaceNote = ({ placeId, privateNote, onSaved }) => {
+const PrivatePlaceNote = ({ placeId, onSaved }) => {
+  const [note, setNote] = useState(null);
+  const [noteLoading, setNoteLoading] = useState(() => Boolean(placeId));
   const [showEditor, setShowEditor] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [draft, setDraft] = useState("");
@@ -10,13 +14,33 @@ const PrivatePlaceNote = ({ placeId, privateNote, onSaved }) => {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const hasNote = Boolean(privateNote != null && String(privateNote).trim());
+  const hasNote = Boolean(note != null && String(note).trim());
+
+  useEffect(() => {
+    if (!placeId) {
+      setNote(null);
+      setNoteLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setNoteLoading(true);
+    setNote(null);
+    getDecryptedPrivateNoteForPlace(placeId).then((n) => {
+      if (!cancelled) {
+        setNote(n);
+        setNoteLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [placeId]);
 
   useEffect(() => {
     if (!showEditor) return;
-    setDraft(isEditMode ? String(privateNote ?? "") : "");
+    setDraft(isEditMode ? String(note ?? "") : "");
     setError("");
-  }, [showEditor, isEditMode, privateNote]);
+  }, [showEditor, isEditMode, note]);
 
   const openAdd = () => {
     setIsEditMode(false);
@@ -27,7 +51,7 @@ const PrivatePlaceNote = ({ placeId, privateNote, onSaved }) => {
 
   const openEdit = () => {
     setIsEditMode(true);
-    setDraft(String(privateNote ?? ""));
+    setDraft(String(note ?? ""));
     setError("");
     setShowEditor(true);
   };
@@ -63,6 +87,7 @@ const PrivatePlaceNote = ({ placeId, privateNote, onSaved }) => {
     setSaving(true);
     try {
       await PlaceFinder.put(`/${placeId}/private-note`, { note: trimmed });
+      setNote(trimmed);
       await onSaved?.();
       setShowEditor(false);
     } catch (err) {
@@ -83,6 +108,7 @@ const PrivatePlaceNote = ({ placeId, privateNote, onSaved }) => {
     setError("");
     try {
       await PlaceFinder.delete(`/${placeId}/private-note`);
+      setNote(null);
       await onSaved?.();
       setShowDeleteConfirm(false);
     } catch (err) {
@@ -139,10 +165,18 @@ const PrivatePlaceNote = ({ placeId, privateNote, onSaved }) => {
               </button>
             </div>
           </div>
+        ) : noteLoading ? (
+          <p
+            className="place-details-private-notes-loading small mb-0"
+            style={{ color: "var(--text-muted, #6c757d)" }}
+          >
+            <i className="fas fa-spinner fa-spin me-2" aria-hidden />
+            Loading private note…
+          </p>
         ) : hasNote ? (
           <>
             <p className="place-details-notes-body place-details-private-notes-body mb-3">
-              {privateNote}
+              {note}
             </p>
             <div className="d-flex flex-wrap gap-2">
               <button

@@ -330,11 +330,7 @@ const PlaceDetailsPage = () => {
                 </div>
               ) : null}
             </div>
-            <PrivatePlaceNote
-              placeId={id}
-              privateNote={selectedPlace.place.private_note}
-              onSaved={reloadPlace}
-            />
+            <PrivatePlaceNote placeId={id} onSaved={reloadPlace} />
           </div>
           {relatedPlaces.length > 0 ? (
             <RelatedPlacesCarousel places={relatedPlaces} />

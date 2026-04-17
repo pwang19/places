@@ -122,6 +122,11 @@ async function fetchPrivateNoteDecrypted(placeId) {
   }
 }
 
+/** GET decrypted private note (edge function). Not part of place detail merge — load in parallel from UI. */
+export async function getDecryptedPrivateNoteForPlace(placeId) {
+  return fetchPrivateNoteDecrypted(placeId);
+}
+
 async function privateNoteRequest(method, placeId, body = undefined) {
   if (!supabase) throw apiError("Supabase is not configured", 500);
   const { data: { session } } = await supabase.auth.getSession();
@@ -228,7 +233,7 @@ async function getPlaceDetailMerged(placeId) {
     place.related_places = [];
   }
   const reviews = Array.isArray(payload.reviews) ? payload.reviews : [];
-  place.private_note = await fetchPrivateNoteDecrypted(placeId);
+  place.private_note = null;
   return { place, reviews };
 }
 
