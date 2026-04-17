@@ -5,7 +5,7 @@ A small app for listing **places**, **reviews**, and **tags**. The default stack
 ## Features
 
 - Browse places with sortable columns, average rating, and review counts  
-- Add, update, and delete places (name, location, price range)  
+- Add and update places (name, location, price range); admins may delete places  
 - Add reviews with star ratings  
 - Tag places with autocomplete suggestions; filter the list by tag name  
 - Location is a free-text field on add/edit place forms  
@@ -14,24 +14,21 @@ A small app for listing **places**, **reviews**, and **tags**. The default stack
 ## Prerequisites
 
 - **Node.js** and **npm** (LTS recommended)  
-- A **Supabase** project; for migrations and Edge deploys, the [Supabase CLI](https://supabase.com/docs/guides/cli) is recommended (see [SUPABASE.md](SUPABASE.md))
+- A **Supabase** project; for migrations and Edge deploys, use the [Supabase CLI](https://supabase.com/docs/guides/cli) (`supabase link`, `supabase db push`, `supabase functions deploy`)
 
 ## Repository layout
 
 | Path | Role |
 |------|------|
 | `client/` | React app (Vite + TypeScript) |
-| `packages/shared/` | Shared constants and validation (`@places/shared`; TypeScript → CJS for Node) |
+| `packages/shared/` | Shared constants and validation (`@places/shared`) |
 | `supabase/migrations/` | Postgres schema, RLS, RPCs |
 | `supabase/functions/private-note/` | Edge Function for private notes |
-| [SUPABASE.md](SUPABASE.md) | **Start here:** Supabase, Google Auth, Edge deploy, Cloudflare Pages |
-| `server/` | **Legacy** Express API + `pg` (optional; uses `@places/shared`) |
-| [SETUP.md](SETUP.md) | Legacy local setup for Express + Postgres |
 
 ## Quick start (Supabase)
 
-1. Create a Supabase project and apply migrations: **`supabase link`** + **`supabase db push`** from the repo root, or paste SQL from `supabase/migrations/` in the Dashboard. Details in [SUPABASE.md](SUPABASE.md).
-2. Enable **Google** in Supabase Auth. Deploy **`private-note`** and set **`supabase secrets set PRIVATE_NOTES_KEY=...`**, then **`supabase functions deploy private-note`**. See [SUPABASE.md](SUPABASE.md).
+1. Create a Supabase project and apply migrations: **`supabase link`** + **`supabase db push`** from the repo root, or run SQL from `supabase/migrations/` in order in the SQL Editor.
+2. Enable **Google** in Supabase Auth. Deploy **`private-note`**: set a 32-byte hex key with **`supabase secrets set PRIVATE_NOTES_KEY=...`**, then **`supabase functions deploy private-note`** (see `supabase/functions/private-note/`).
 3. From the **repository root**:
 
 ```bash
@@ -60,12 +57,12 @@ chmod +x start.sh   # first time only
 - **Cloudflare Pages:** SPA routing is automatic when there is no top-level `404.html` (Vite build has none). Do not add `/* /index.html 200` in `_redirects` — Cloudflare flags it as an infinite loop.
 - **Netlify:** [`client/netlify.toml`](client/netlify.toml) provides the same fallback.
 
-## Legacy Express API (optional)
+## Data access model (security)
 
-The **PERN** stack in `server/` uses **`npm run start -w server`** from the root after `npm install`. It depends on **`@places/shared`** (built on install). See [SETUP.md](SETUP.md) and [server/.env.example](server/.env.example). The default React client talks to **Supabase only**.
+- **Places (wiki):** Any signed-in user may **read** and **update** any place (name, location, notes, contact fields, etc.). Vandalism is a residual risk; **deleting** a place is restricted to **app admins** (see `is_app_admin()` in migrations).
+- **Tags and related links:** Any signed-in user may **add** tags (`link_tag_to_place`) and **add** related-place links (`link_places`). **Removing** a tag from a place or **unlinking** related places requires an **app admin** (RLS + `unlink_places` RPC).
 
 ## Tech stack
 
 - **Frontend:** React 18, TypeScript, Vite, React Router, Bootstrap 5, `@supabase/supabase-js`, `@react-oauth/google`  
-- **Backend (default):** Supabase Postgres, PostgREST, RLS, RPCs, Edge Functions  
-- **Legacy backend:** Express, `pg` (`server/`)
+- **Backend:** Supabase Postgres, PostgREST, RLS, RPCs, Edge Functions

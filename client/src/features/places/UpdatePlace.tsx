@@ -436,43 +436,45 @@ const UpdatePlace = ({
                           }}
                         >
                           {rp.name}
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-link p-0 m-0"
-                            style={{
-                              lineHeight: 1,
-                              textDecoration: "none",
-                              color: "var(--text-muted)",
-                            }}
-                            title="Remove link"
-                            aria-label={`Unlink ${rp.name}`}
-                            disabled={linkActionBusy}
-                            onClick={async () => {
-                              setLinkActionBusy(true);
-                              setLinkError("");
-                              try {
-                                await PlaceFinder.delete(
-                                  `/${placeId}/links/${rp.id}`
-                                );
-                                await pullPlaceFromServer();
-                              } catch (err: unknown) {
-                                const er = err as {
-                                  response?: { data?: { message?: string } };
-                                };
-                                const msg =
-                                  er?.response?.data?.message ||
-                                  (err instanceof Error
-                                    ? err.message
-                                    : null) ||
-                                  "Could not remove link.";
-                                setLinkError(String(msg));
-                              } finally {
-                                setLinkActionBusy(false);
-                              }
-                            }}
-                          >
-                            ×
-                          </button>
+                          {isAdmin ? (
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-link p-0 m-0"
+                              style={{
+                                lineHeight: 1,
+                                textDecoration: "none",
+                                color: "var(--text-muted)",
+                              }}
+                              title="Remove link"
+                              aria-label={`Unlink ${rp.name}`}
+                              disabled={linkActionBusy}
+                              onClick={async () => {
+                                setLinkActionBusy(true);
+                                setLinkError("");
+                                try {
+                                  await PlaceFinder.delete(
+                                    `/${placeId}/links/${rp.id}`
+                                  );
+                                  await pullPlaceFromServer();
+                                } catch (err: unknown) {
+                                  const er = err as {
+                                    response?: { data?: { message?: string } };
+                                  };
+                                  const msg =
+                                    er?.response?.data?.message ||
+                                    (err instanceof Error
+                                      ? err.message
+                                      : null) ||
+                                    "Could not remove link.";
+                                  setLinkError(String(msg));
+                                } finally {
+                                  setLinkActionBusy(false);
+                                }
+                              }}
+                            >
+                              ×
+                            </button>
+                          ) : null}
                         </span>
                       ))}
                     </div>
@@ -520,29 +522,31 @@ const UpdatePlace = ({
                           }}
                         >
                           {t.name}
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-link p-0 m-0"
-                            style={{
-                              lineHeight: 1,
-                              textDecoration: "none",
-                              color: "var(--text-muted)",
-                            }}
-                            title="Remove tag"
-                            aria-label={`Remove tag ${t.name}`}
-                            onClick={async () => {
-                              try {
-                                await PlaceFinder.delete(
-                                  `/${placeId}/tags/${t.id}`
-                                );
-                                await syncPlaceAfterTagChange();
-                              } catch (e) {
-                                console.error(e);
-                              }
-                            }}
-                          >
-                            ×
-                          </button>
+                          {isAdmin ? (
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-link p-0 m-0"
+                              style={{
+                                lineHeight: 1,
+                                textDecoration: "none",
+                                color: "var(--text-muted)",
+                              }}
+                              title="Remove tag"
+                              aria-label={`Remove tag ${t.name}`}
+                              onClick={async () => {
+                                try {
+                                  await PlaceFinder.delete(
+                                    `/${placeId}/tags/${t.id}`
+                                  );
+                                  await syncPlaceAfterTagChange();
+                                } catch (e) {
+                                  console.error(e);
+                                }
+                              }}
+                            >
+                              ×
+                            </button>
+                          ) : null}
                         </span>
                       ))}
                     </div>

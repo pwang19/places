@@ -163,7 +163,7 @@ CREATE POLICY "private_notes_own_delete"
   USING (user_id = auth.uid());
 
 -- ---------------------------------------------------------------------------
--- RPC: list_places (tag AND filter, same semantics as server/queries/places.js)
+-- RPC: list_places (tag AND filter)
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.list_places(tag_filters text[] DEFAULT NULL)
 RETURNS jsonb

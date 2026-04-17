@@ -1,6 +1,6 @@
 import { DISPLAY_NAME_MAX_LEN } from "@places/shared";
 
-/** Display label for the signed-in user (mirrors server displayNameFromUser). */
+/** Display label for the signed-in user (aligned with posting name in reviews). */
 export function postingAsLabel(user) {
   if (!user) return "Member";
   const rawName = user.name != null ? String(user.name).trim() : "";

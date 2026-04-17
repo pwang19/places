@@ -2,12 +2,12 @@
 
 React + TypeScript SPA for Places: list and filter places, details, reviews, tags, and private notes (Supabase).
 
-This package is part of an **npm workspace** monorepo. Install dependencies from the **repository root** (`npm install`), which also builds [`@places/shared`](../packages/shared) for shared constants used by the client and server.
+This package is part of an **npm workspace** monorepo. Install dependencies from the **repository root** (`npm install`), which also builds [`@places/shared`](../packages/shared) for shared constants used by the client.
 
 ## Requirements
 
 - Node.js and npm (LTS)
-- Supabase project and env vars below (see [SUPABASE.md](../SUPABASE.md))
+- Supabase project and env vars below
 
 ## Environment variables
 
@@ -33,8 +33,6 @@ From the **repo root**:
 | `npm run dev -w client` | Vite dev server at [http://localhost:3000](http://localhost:3000) |
 | `npm run build -w client` | Production build in **`client/dist/`** |
 | `npm run preview -w client` | Preview the production build locally |
-
-`/api` is proxied to `http://localhost:5001` in dev (legacy Express); the default Supabase client does not need it.
 
 ## Deploy (e.g. Cloudflare Pages)
 

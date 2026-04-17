@@ -1,14 +1,12 @@
 {
   "name": "places",
   "private": true,
-  "workspaces": ["client", "server", "packages/*"],
+  "workspaces": ["client", "packages/*"],
   "scripts": {
     "build:shared": "npm run build -w @places/shared",
     "client": "npm run dev -w client",
     "client:build": "npm run build -w client",
-    "seed:dev-users": "node scripts/seed-dev-auth-users.mjs",
-    "server": "npm run start -w server",
-    "server:dev": "npm run dev -w server"
+    "seed:dev-users": "node scripts/seed-dev-auth-users.mjs"
   },
   "devDependencies": {
     "@supabase/supabase-js": "^2.49.1"
