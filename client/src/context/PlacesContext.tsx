@@ -2,6 +2,8 @@ import React, {
   useState,
   useContext,
   createContext,
+  useCallback,
+  useRef,
   type ReactNode,
   type Dispatch,
   type SetStateAction,
@@ -24,6 +26,9 @@ export type PlacesContextValue = {
   addPlaces: (place: PlaceListEntry) => void;
   selectedPlace: SelectedPlaceDetail;
   setSelectedPlace: Dispatch<SetStateAction<SelectedPlaceDetail>>;
+  /** PlaceList registers how to reload the main list (current filters). */
+  registerPlacesReload: (fn: (() => void) | null) => void;
+  reloadPlaces: () => void;
 };
 
 export const PlacesContext = createContext<PlacesContextValue | undefined>(
@@ -41,10 +46,19 @@ export function usePlacesContext(): PlacesContextValue {
 export function PlacesContextProvider({ children }: { children: ReactNode }) {
   const [places, setPlaces] = useState<PlaceListEntry[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<SelectedPlaceDetail>(null);
+  const placesReloadRef = useRef<(() => void) | null>(null);
 
   const addPlaces = (place: PlaceListEntry) => {
     setPlaces((prev) => [...prev, place]);
   };
+
+  const registerPlacesReload = useCallback((fn: (() => void) | null) => {
+    placesReloadRef.current = fn;
+  }, []);
+
+  const reloadPlaces = useCallback(() => {
+    placesReloadRef.current?.();
+  }, []);
 
   return (
     <PlacesContext.Provider
@@ -54,6 +68,8 @@ export function PlacesContextProvider({ children }: { children: ReactNode }) {
         addPlaces,
         selectedPlace,
         setSelectedPlace,
+        registerPlacesReload,
+        reloadPlaces,
       }}
     >
       {children}

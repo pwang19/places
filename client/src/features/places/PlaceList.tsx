@@ -86,7 +86,7 @@ const PLACE_TABLE_HEADER_SPEC = [
 ];
 
 const PlaceList = (props) => {
-  const { places, setPlaces } = usePlacesContext();
+  const { places, setPlaces, registerPlacesReload } = usePlacesContext();
   const { isAdmin } = useAuth();
   let navigate = useNavigate(); // useNavigate function to navigate to place details page
   const [listViewMode, setListViewMode] = useState(readStoredListView);
@@ -251,6 +251,24 @@ const PlaceList = (props) => {
       isAdmin && showFlaggedOnly
     );
   }, [activeFilterTags, activeListIds, loadPlaces, isAdmin, showFlaggedOnly]);
+
+  useEffect(() => {
+    registerPlacesReload(() => {
+      loadPlaces(
+        activeFilterTags,
+        activeListIds,
+        isAdmin && showFlaggedOnly
+      );
+    });
+    return () => registerPlacesReload(null);
+  }, [
+    registerPlacesReload,
+    loadPlaces,
+    activeFilterTags,
+    activeListIds,
+    isAdmin,
+    showFlaggedOnly,
+  ]);
 
   const refreshPlaceLists = useCallback(async () => {
     try {

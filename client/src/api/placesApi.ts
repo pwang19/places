@@ -687,6 +687,46 @@ export async function replaceAppAdmins(usernames) {
   if (error) throw fromPostgrestError(error);
 }
 
+export async function listAllTags() {
+  if (!supabase) throw apiError("Supabase is not configured", 500);
+  const { data, error } = await supabase
+    .from("tags")
+    .select("id,name")
+    .order("name", { ascending: true });
+  if (error) throw fromPostgrestError(error);
+  return Array.isArray(data) ? data : [];
+}
+
+export async function adminRenameTag(tagId, newName) {
+  if (!supabase) throw apiError("Supabase is not configured", 500);
+  const { data, error } = await supabase.rpc("admin_rename_tag", {
+    p_tag_id: Number(tagId),
+    p_new_name: String(newName ?? ""),
+  });
+  if (error) throw fromPostgrestError(error);
+  return data;
+}
+
+export async function adminMergeTags(keepTagId, mergeTagIds) {
+  if (!supabase) throw apiError("Supabase is not configured", 500);
+  const ids = Array.isArray(mergeTagIds)
+    ? mergeTagIds.map((n) => Number(n)).filter((n) => Number.isFinite(n))
+    : [];
+  const { error } = await supabase.rpc("admin_merge_tags", {
+    p_keep_tag_id: Number(keepTagId),
+    p_merge_tag_ids: ids,
+  });
+  if (error) throw fromPostgrestError(error);
+}
+
+export async function adminDeleteTag(tagId) {
+  if (!supabase) throw apiError("Supabase is not configured", 500);
+  const { error } = await supabase.rpc("admin_delete_tag", {
+    p_tag_id: Number(tagId),
+  });
+  if (error) throw fromPostgrestError(error);
+}
+
 export async function addPlaceFlagRpc(placeId, reason) {
   if (!supabase) throw apiError("Supabase is not configured", 500);
   const { error } = await supabase.rpc("add_place_flag", {

@@ -10,7 +10,7 @@ import UpdatePlace from "../features/places/UpdatePlace";
 import PlaceFlagsModal from "../features/places/PlaceFlagsModal";
 import PrivatePlaceNote from "../features/places/PrivatePlaceNote";
 import UserMenu from "../features/auth/UserMenu";
-import EditAdminsControl from "../features/auth/EditAdminsControl";
+import AdminActionsControl from "../features/auth/AdminActionsControl";
 import { useAuth } from "../context/AuthContext";
 import { normalizeTags } from "../utils/tags";
 import { formatPriceRangeDollars } from "../utils/priceRange";
@@ -123,7 +123,7 @@ const PlaceDetailsPage = () => {
           Back to Places
         </button>
         <div className="ms-auto d-flex align-items-center flex-shrink-0 gap-2">
-          <EditAdminsControl />
+          <AdminActionsControl />
           <UserMenu />
         </div>
       </div>
