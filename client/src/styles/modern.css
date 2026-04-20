@@ -811,9 +811,39 @@ body {
   justify-content: flex-end;
 }
 
+.place-tiles-export-wrap {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+
+.place-tiles-export-btn {
+  border: 1px solid var(--border-color);
+  background: var(--surface);
+  color: var(--text-heading);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.place-tiles-export-btn:hover:not(:disabled) {
+  background: var(--surface-hover);
+  border-color: var(--primary-hover);
+}
+
+.place-tiles-export-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .place-tiles-name-search {
   flex: 0 0 auto;
-  margin-left: auto;
   display: flex;
   align-items: center;
 }

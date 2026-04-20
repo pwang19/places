@@ -15,6 +15,8 @@ import { normalizeTags } from "../../utils/tags";
 import { formatPriceRangeDollars } from "../../utils/priceRange";
 import { cityStateFromLocation } from "../../utils/locationDisplay";
 import { setPlaceDragData } from "../../utils/placeDrag";
+import { downloadPlacesCsv } from "../../utils/exportPlacesCsv";
+import ExportPlacesCsvModal from "./ExportPlacesCsvModal";
 
 const LIST_VIEW_STORAGE_KEY = "places-list-view-mode";
 
@@ -98,6 +100,7 @@ const PlaceList = (props) => {
   const [nameSearchOpen, setNameSearchOpen] = useState(false);
   const [nameSearchInput, setNameSearchInput] = useState("");
   const [nameSearchApplied, setNameSearchApplied] = useState("");
+  const [exportModalOpen, setExportModalOpen] = useState(false);
   const nameSearchInputRef = useRef(null);
   const filtersWrapRef = useRef(null);
   const tableWrapRef = useRef(null);
@@ -1020,6 +1023,23 @@ const PlaceList = (props) => {
                 ) : null}
               </div>
             </div>
+            <div className="place-tiles-export-wrap">
+              <button
+                type="button"
+                className="place-tiles-export-btn"
+                onClick={() => setExportModalOpen(true)}
+                disabled={!displayPlaces || displayPlaces.length === 0}
+                title={
+                  !displayPlaces || displayPlaces.length === 0
+                    ? "Nothing to export"
+                    : "Export current list to CSV"
+                }
+                aria-label="Export places to CSV"
+              >
+                <i className="fas fa-file-csv" aria-hidden />
+                <span>Export</span>
+              </button>
+            </div>
             {listViewMode === "tile" ? (
               <div className="place-tiles-name-search">
                 {!nameSearchOpen ? (
@@ -1565,7 +1585,15 @@ const PlaceList = (props) => {
           </div>
         )}
       </div>
-
+      <ExportPlacesCsvModal
+        open={exportModalOpen}
+        onClose={() => setExportModalOpen(false)}
+        placeCount={displayPlaces?.length ?? 0}
+        onConfirm={(optional) => {
+          downloadPlacesCsv(displayPlaces ?? [], optional);
+          setExportModalOpen(false);
+        }}
+      />
     </>
   );
 };
