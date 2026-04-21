@@ -19,15 +19,40 @@ import { downloadPlacesCsv } from "../../utils/exportPlacesCsv";
 import ExportPlacesCsvModal from "./ExportPlacesCsvModal";
 
 const LIST_VIEW_STORAGE_KEY = "places-list-view-mode";
+const COLUMN_PAGE_SIZE_KEY = "places-column-page-size";
+const TILE_VISIBLE_KEY = "places-tile-visible-count";
 
 function readStoredListView() {
   try {
     const v = localStorage.getItem(LIST_VIEW_STORAGE_KEY);
-    if (v === "column" || v === "tile") return v;
+    if (v === "table" || v === "tile") return v;
+    if (v === "column") return "table";
   } catch {
     /* ignore */
   }
-  return "column";
+  return "table";
+}
+
+function readStoredColumnPageSize() {
+  try {
+    const v = localStorage.getItem(COLUMN_PAGE_SIZE_KEY);
+    if (v === "10" || v === "25" || v === "50") return v;
+    if (v === "all") return "50";
+  } catch {
+    /* ignore */
+  }
+  return "10";
+}
+
+function readStoredTileVisible() {
+  try {
+    const v = localStorage.getItem(TILE_VISIBLE_KEY);
+    if (v === "6" || v === "12" || v === "48") return v;
+    if (v === "all") return "48";
+  } catch {
+    /* ignore */
+  }
+  return "6";
 }
 
 function tagsSortKey(place) {
@@ -89,6 +114,7 @@ const PlaceList = (props) => {
   const { places, setPlaces, registerPlacesReload } = usePlacesContext();
   const { isAdmin } = useAuth();
   let navigate = useNavigate(); // useNavigate function to navigate to place details page
+  /** `"table"` = tables view (sortable HTML table); `"tile"` = tiles carousel */
   const [listViewMode, setListViewMode] = useState(readStoredListView);
   const [sortColumn, setSortColumn] = useState("name");
   const [sortDirection, setSortDirection] = useState("asc"); // 'asc' or 'desc'
@@ -101,6 +127,10 @@ const PlaceList = (props) => {
   const [nameSearchInput, setNameSearchInput] = useState("");
   const [nameSearchApplied, setNameSearchApplied] = useState("");
   const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [columnPageSize, setColumnPageSize] = useState(readStoredColumnPageSize);
+  const [columnPage, setColumnPage] = useState(0);
+  const [tileVisibleOption, setTileVisibleOption] = useState(readStoredTileVisible);
+  const [tileCarouselIndex, setTileCarouselIndex] = useState(0);
   const nameSearchInputRef = useRef(null);
   const filtersWrapRef = useRef(null);
   const tableWrapRef = useRef(null);
@@ -198,7 +228,7 @@ const PlaceList = (props) => {
   }, [listViewMode]);
 
   useEffect(() => {
-    if (listViewMode !== "column") return;
+    if (listViewMode !== "table") return;
     setNameSearchApplied("");
     setNameSearchInput("");
     setNameSearchOpen(false);
@@ -433,7 +463,7 @@ const PlaceList = (props) => {
     ]
   );
 
-  const columnClientFiltersActive = useMemo(
+  const tableClientFiltersActive = useMemo(
     () =>
       colFilterName.trim() !== "" ||
       colFilterNotes.trim() !== "" ||
@@ -515,7 +545,7 @@ const PlaceList = (props) => {
         (p.name || "").toLowerCase().includes(q)
       );
     }
-    if (listViewMode !== "column") return rows;
+    if (listViewMode !== "table") return rows;
     const nf = colFilterName.trim().toLowerCase();
     if (nf) {
       rows = rows.filter((p) =>
@@ -563,6 +593,91 @@ const PlaceList = (props) => {
     colFilterRating,
   ]);
 
+  const columnTotalPages = useMemo(() => {
+    if (!displayPlaces?.length) return 1;
+    return Math.max(1, Math.ceil(displayPlaces.length / Number(columnPageSize)));
+  }, [displayPlaces, columnPageSize]);
+
+  const columnPagedPlaces = useMemo(() => {
+    if (!displayPlaces?.length) return [];
+    const size = Number(columnPageSize);
+    const start = columnPage * size;
+    return displayPlaces.slice(start, start + size);
+  }, [displayPlaces, columnPageSize, columnPage]);
+
+  const columnPageRangeText = useMemo(() => {
+    if (!displayPlaces?.length) return null;
+    const size = Number(columnPageSize);
+    const start = columnPage * size + 1;
+    const end = Math.min((columnPage + 1) * size, displayPlaces.length);
+    return `Showing ${start}–${end} of ${displayPlaces.length}`;
+  }, [displayPlaces, columnPageSize, columnPage]);
+
+  const tileChunks = useMemo(() => {
+    if (!displayPlaces?.length) return [];
+    const n = Number(tileVisibleOption);
+    const chunks = [];
+    for (let i = 0; i < displayPlaces.length; i += n) {
+      chunks.push(displayPlaces.slice(i, i + n));
+    }
+    return chunks;
+  }, [displayPlaces, tileVisibleOption]);
+
+  useEffect(() => {
+    setColumnPage((p) =>
+      Math.min(p, Math.max(0, columnTotalPages - 1))
+    );
+  }, [columnTotalPages]);
+
+  useEffect(() => {
+    setColumnPage(0);
+  }, [
+    columnPageSize,
+    nameSearchApplied,
+    activeFilterTags,
+    activeListIds,
+    showFlaggedOnly,
+    colFilterName,
+    colFilterNotes,
+    colFilterLocation,
+    colFilterPrices,
+    colFilterRating,
+    places?.length,
+  ]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(COLUMN_PAGE_SIZE_KEY, columnPageSize);
+    } catch {
+      /* ignore */
+    }
+  }, [columnPageSize]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(TILE_VISIBLE_KEY, tileVisibleOption);
+    } catch {
+      /* ignore */
+    }
+  }, [tileVisibleOption]);
+
+  useEffect(() => {
+    setTileCarouselIndex(0);
+  }, [
+    tileVisibleOption,
+    listViewMode,
+    nameSearchApplied,
+    activeFilterTags,
+    activeListIds,
+    showFlaggedOnly,
+    colFilterName,
+    colFilterNotes,
+    colFilterLocation,
+    colFilterPrices,
+    colFilterRating,
+    places?.length,
+  ]);
+
   const emptyPlacesMessage = useMemo(() => {
     if (
       sortedPlaces &&
@@ -575,10 +690,10 @@ const PlaceList = (props) => {
     if (
       sortedPlaces &&
       sortedPlaces.length > 0 &&
-      listViewMode === "column" &&
-      columnClientFiltersActive
+      listViewMode === "table" &&
+      tableClientFiltersActive
     ) {
-      return "No places match these column filters.";
+      return "No places match these table filters.";
     }
     if (activeFilterTags.length > 0 || activeListIds.length > 0) {
       return "No places match these filters.";
@@ -591,7 +706,7 @@ const PlaceList = (props) => {
     sortedPlaces,
     nameSearchApplied,
     listViewMode,
-    columnClientFiltersActive,
+    tableClientFiltersActive,
     activeFilterTags.length,
     activeListIds.length,
     isAdmin,
@@ -634,6 +749,115 @@ const PlaceList = (props) => {
         <StarRating rating={avg} />
         <span style={{ color: "var(--text-muted)" }}>({place.count})</span>
       </>
+    );
+  };
+
+  const renderPlaceTileArticle = (place) => {
+    const tags = normalizeTags(place.tags);
+    const priceLabel = formatPriceRangeDollars(place.price_range);
+    const notesText = place.notes?.trim() || "";
+    const hasNotes = Boolean(notesText);
+    const notesTooltipFirstLine = notesText.split(/\r?\n/, 1)[0].trim();
+    const flagCount = Number(place.flag_count) || 0;
+    const hasFlags = flagCount > 0;
+    return (
+      <article
+        className={`place-tile${hasNotes ? " place-tile--has-notes" : ""}${hasFlags ? " place-tile--has-flag" : ""}`}
+        key={place.id}
+      >
+        {hasFlags ? (
+          <span
+            className="place-tile-flag-icon"
+            title={`${flagCount} flag report${flagCount === 1 ? "" : "s"}`}
+            aria-label="This place has been flagged"
+          >
+            <i className="fas fa-flag" aria-hidden />
+          </span>
+        ) : null}
+        <button
+          type="button"
+          className="place-tile-drag-handle"
+          draggable
+          title="Drag into list (left)"
+          aria-label={`Drag ${place.name || "place"} to add to a list`}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+          onDragStart={(e) => {
+            e.stopPropagation();
+            setPlaceDragData(e.dataTransfer, {
+              id: place.id,
+              name: place.name,
+              location: place.location,
+              price_range: place.price_range ?? null,
+            });
+            e.dataTransfer.effectAllowed = "copy";
+          }}
+        >
+          <i className="fas fa-grip-vertical" aria-hidden />
+        </button>
+        <div
+          className="place-tile-main"
+          onClick={() => handlePlaceSelect(place.id)}
+          role="link"
+          tabIndex={0}
+          aria-describedby={
+            hasNotes ? `place-tile-notes-${place.id}` : undefined
+          }
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handlePlaceSelect(place.id);
+            }
+          }}
+        >
+          <h3 className="place-tile-name">{place.name}</h3>
+          {priceLabel ? (
+            <p className="place-tile-price-range mb-0">{priceLabel}</p>
+          ) : null}
+          <p className="place-tile-location">
+            <i
+              className="fas fa-map-marker-alt place-tile-location-icon"
+              aria-hidden
+            />
+            <span>{place.location}</span>
+          </p>
+          <div
+            className="place-tile-tags"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
+            {tags.length === 0 ? (
+              <span className="text-muted small">No tags</span>
+            ) : (
+              tags.map((t) => (
+                <span
+                  key={t.id}
+                  className="place-tile-tag badge rounded-pill"
+                >
+                  {t.name}
+                </span>
+              ))
+            )}
+          </div>
+          {!place.reviews_disabled ? (
+            <div className="place-tile-rating rating-display">
+              {renderRating(place)}
+            </div>
+          ) : null}
+        </div>
+        {hasNotes ? (
+          <div
+            id={`place-tile-notes-${place.id}`}
+            className="place-tile-notes-tooltip"
+            role="tooltip"
+          >
+            <span className="place-tile-notes-tooltip-label">Public notes</span>
+            <p className="place-tile-notes-tooltip-text mb-0">
+              {notesTooltipFirstLine}
+            </p>
+          </div>
+        ) : null}
+      </article>
     );
   };
 
@@ -820,6 +1044,9 @@ const PlaceList = (props) => {
     }
   };
 
+  const maxTileSlide = Math.max(0, tileChunks.length - 1);
+  const tileSlideIndex = Math.min(tileCarouselIndex, maxTileSlide);
+
   return (
     <>
       <div className="modern-table-container place-tiles-root">
@@ -833,16 +1060,16 @@ const PlaceList = (props) => {
               <div
                 className="place-tiles-view-toggle"
                 role="group"
-                aria-label="Places list layout"
+                aria-label="Table or tiles layout"
               >
                 <button
                   type="button"
-                  className={`place-tiles-view-btn${listViewMode === "column" ? " is-active" : ""}`}
-                  aria-pressed={listViewMode === "column"}
-                  onClick={() => setListViewMode("column")}
+                  className={`place-tiles-view-btn${listViewMode === "table" ? " is-active" : ""}`}
+                  aria-pressed={listViewMode === "table"}
+                  onClick={() => setListViewMode("table")}
                 >
-                  <i className="fas fa-columns" aria-hidden />
-                  Columns
+                  <i className="fas fa-table" aria-hidden />
+                  Table
                 </button>
                 <button
                   type="button"
@@ -876,7 +1103,7 @@ const PlaceList = (props) => {
               >
                 <button
                   type="button"
-                  className={`place-tiles-filters-trigger${activeFilterTags.length > 0 || activeListIds.length > 0 || (listViewMode === "column" && columnClientFiltersActive) ? " has-active-filters" : ""}`}
+                  className={`place-tiles-filters-trigger${activeFilterTags.length > 0 || activeListIds.length > 0 || (listViewMode === "table" && tableClientFiltersActive) ? " has-active-filters" : ""}`}
                   aria-expanded={filtersOpen}
                   aria-haspopup="dialog"
                   aria-controls="place-list-filters-panel"
@@ -896,13 +1123,13 @@ const PlaceList = (props) => {
                     className="place-tiles-filters-panel"
                     role="dialog"
                     aria-label={
-                      listViewMode === "column"
+                      listViewMode === "table"
                         ? "Filter places by lists"
                         : "Filter places by tags and lists"
                     }
                   >
                     <div className="place-tiles-filters-panel-body">
-                      {listViewMode !== "column" ? (
+                      {listViewMode !== "table" ? (
                         <div className="place-tiles-filters-section">
                           <h3
                             className="place-tiles-filters-section-title"
@@ -1128,8 +1355,8 @@ const PlaceList = (props) => {
               !nameSearchApplied.trim() &&
               !(isAdmin && showFlaggedOnly) &&
               !(
-                listViewMode === "column" &&
-                columnClientFiltersActive
+                listViewMode === "table" &&
+                tableClientFiltersActive
               )
                 ? " visually-hidden"
                 : ""
@@ -1201,11 +1428,11 @@ const PlaceList = (props) => {
               <>
                 Showing <strong>only flagged</strong> places.
               </>
-            ) : listViewMode === "column" ? (
+            ) : listViewMode === "table" ? (
               <>
-                Open <strong>Filters</strong> for lists. Use <strong>column
+                Open <strong>Filters</strong> for lists. Use <strong>table
                 headers</strong> for sort, tags (match <strong>all</strong>),
-                name text, and other column filters.
+                name text, and other table header filters.
               </>
             ) : (
               <>
@@ -1217,7 +1444,8 @@ const PlaceList = (props) => {
             )}
           </p>
         </div>
-        {listViewMode === "column" ? (
+        {listViewMode === "table" ? (
+          <>
           <div
             className={`place-tiles-table-wrap${colMenuKey != null ? " place-tiles-table-wrap--menu-open" : ""}`}
             ref={tableWrapRef}
@@ -1248,7 +1476,7 @@ const PlaceList = (props) => {
                               className="place-tiles-col-resizer"
                               role="separator"
                               aria-orientation="vertical"
-                              aria-label="Resize after drag column"
+                              aria-label="Resize after drag-handle column"
                               onMouseDown={(e) =>
                                 handleColResizeStart(e, colIndex)
                               }
@@ -1334,8 +1562,8 @@ const PlaceList = (props) => {
                 </tr>
               </thead>
               <tbody>
-                {displayPlaces && displayPlaces.length > 0 ? (
-                  displayPlaces.map((place) => {
+                {columnPagedPlaces && columnPagedPlaces.length > 0 ? (
+                  columnPagedPlaces.map((place) => {
                     const tags = normalizeTags(place.tags);
                     const priceLabel = formatPriceRangeDollars(
                       place.price_range
@@ -1483,124 +1711,190 @@ const PlaceList = (props) => {
               </tbody>
             </table>
           </div>
+          {displayPlaces && displayPlaces.length > 0 ? (
+            <div
+              className="place-tiles-pagination"
+              role="navigation"
+              aria-label="Table pagination"
+            >
+              <div
+                className="place-tiles-pagination-left"
+                role="group"
+                aria-label="Page navigation"
+              >
+                {columnPageRangeText ? (
+                  <span className="place-tiles-pagination-range text-muted small">
+                    {columnPageRangeText}
+                  </span>
+                ) : null}
+                {columnTotalPages > 1 ? (
+                  <div className="place-tiles-page-nav">
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-secondary place-tiles-page-btn"
+                      disabled={columnPage <= 0}
+                      onClick={() => setColumnPage((p) => Math.max(0, p - 1))}
+                      aria-label="Previous page"
+                    >
+                      <i className="fas fa-chevron-left" aria-hidden />
+                      <span className="visually-hidden">Previous</span>
+                    </button>
+                    <span className="place-tiles-page-indicator small text-muted">
+                      Page {columnPage + 1} of {columnTotalPages}
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-secondary place-tiles-page-btn"
+                      disabled={columnPage >= columnTotalPages - 1}
+                      onClick={() =>
+                        setColumnPage((p) =>
+                          Math.min(columnTotalPages - 1, p + 1)
+                        )
+                      }
+                      aria-label="Next page"
+                    >
+                      <span className="visually-hidden">Next</span>
+                      <i className="fas fa-chevron-right" aria-hidden />
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+              <div
+                className="place-tiles-pagination-size"
+                role="group"
+                aria-label="Rows per page"
+              >
+                <span className="place-tiles-sort-label">Rows per page</span>
+                {[
+                  { id: "10", label: "10" },
+                  { id: "25", label: "25" },
+                  { id: "50", label: "50" },
+                ].map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    className={`place-tiles-sort-btn${columnPageSize === opt.id ? " is-active" : ""}`}
+                    onClick={() => setColumnPageSize(opt.id)}
+                    aria-pressed={columnPageSize === opt.id}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          </>
         ) : !displayPlaces || displayPlaces.length === 0 ? (
           <p className="place-tiles-empty text-muted mb-0">
             {emptyPlacesMessage}
           </p>
         ) : (
-          <div className="place-tiles-grid">
-            {displayPlaces.map((place) => {
-              const tags = normalizeTags(place.tags);
-              const priceLabel = formatPriceRangeDollars(place.price_range);
-              const notesText = place.notes?.trim() || "";
-              const hasNotes = Boolean(notesText);
-              const notesTooltipFirstLine =
-                notesText.split(/\r?\n/, 1)[0].trim();
-              const flagCount = Number(place.flag_count) || 0;
-              const hasFlags = flagCount > 0;
-              return (
-                <article
-                  className={`place-tile${hasNotes ? " place-tile--has-notes" : ""}${hasFlags ? " place-tile--has-flag" : ""}`}
-                  key={place.id}
+          <>
+            <div className="place-tiles-carousel-wrap">
+              <div
+                className="place-tiles-carousel"
+                role="region"
+                aria-roledescription="carousel"
+                aria-label="Places tiles"
+                aria-live="polite"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (tileChunks.length <= 1) return;
+                  if (e.key === "ArrowLeft") {
+                    e.preventDefault();
+                    setTileCarouselIndex((i) => Math.max(0, i - 1));
+                  } else if (e.key === "ArrowRight") {
+                    e.preventDefault();
+                    setTileCarouselIndex((i) =>
+                      Math.min(maxTileSlide, i + 1)
+                    );
+                  }
+                }}
+              >
+                <button
+                  type="button"
+                  className="place-tiles-carousel-btn place-tiles-carousel-btn--prev"
+                  aria-label="Previous slide"
+                  disabled={tileSlideIndex <= 0}
+                  onClick={() =>
+                    setTileCarouselIndex((i) => Math.max(0, i - 1))
+                  }
                 >
-                  {hasFlags ? (
-                    <span
-                      className="place-tile-flag-icon"
-                      title={`${flagCount} flag report${flagCount === 1 ? "" : "s"}`}
-                      aria-label="This place has been flagged"
-                    >
-                      <i className="fas fa-flag" aria-hidden />
-                    </span>
-                  ) : null}
-                  <button
-                    type="button"
-                    className="place-tile-drag-handle"
-                    draggable
-                    title="Drag into list (left)"
-                    aria-label={`Drag ${place.name || "place"} to add to a list`}
-                    onClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => e.stopPropagation()}
-                    onDragStart={(e) => {
-                      e.stopPropagation();
-                      setPlaceDragData(e.dataTransfer, {
-                        id: place.id,
-                        name: place.name,
-                        location: place.location,
-                        price_range: place.price_range ?? null,
-                      });
-                      e.dataTransfer.effectAllowed = "copy";
-                    }}
-                  >
-                    <i className="fas fa-grip-vertical" aria-hidden />
-                  </button>
+                  <i className="fas fa-chevron-left" aria-hidden />
+                </button>
+                <div className="place-tiles-carousel-viewport">
                   <div
-                    className="place-tile-main"
-                    onClick={() => handlePlaceSelect(place.id)}
-                    role="link"
-                    tabIndex={0}
-                    aria-describedby={
-                      hasNotes ? `place-tile-notes-${place.id}` : undefined
-                    }
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        handlePlaceSelect(place.id);
-                      }
+                    className="place-tiles-carousel-track"
+                    style={{
+                      transform: `translateX(-${tileSlideIndex * 100}%)`,
                     }}
                   >
-                    <h3 className="place-tile-name">{place.name}</h3>
-                    {priceLabel ? (
-                      <p className="place-tile-price-range mb-0">{priceLabel}</p>
-                    ) : null}
-                    <p className="place-tile-location">
-                      <i
-                        className="fas fa-map-marker-alt place-tile-location-icon"
-                        aria-hidden
-                      />
-                      <span>{place.location}</span>
-                    </p>
-                    <div
-                      className="place-tile-tags"
-                      onClick={(e) => e.stopPropagation()}
-                      onKeyDown={(e) => e.stopPropagation()}
-                    >
-                      {tags.length === 0 ? (
-                        <span className="text-muted small">No tags</span>
-                      ) : (
-                        tags.map((t) => (
-                          <span
-                            key={t.id}
-                            className="place-tile-tag badge rounded-pill"
-                          >
-                            {t.name}
-                          </span>
-                        ))
-                      )}
-                    </div>
-                    {!place.reviews_disabled ? (
-                      <div className="place-tile-rating rating-display">
-                        {renderRating(place)}
+                    {tileChunks.map((chunk, idx) => (
+                      <div
+                        className="place-tiles-carousel-slide"
+                        key={idx}
+                        aria-hidden={idx !== tileSlideIndex}
+                      >
+                        <div className="place-tiles-carousel-slide-grid">
+                          {chunk.map((place) =>
+                            renderPlaceTileArticle(place)
+                          )}
+                        </div>
                       </div>
-                    ) : null}
+                    ))}
                   </div>
-                  {hasNotes ? (
-                    <div
-                      id={`place-tile-notes-${place.id}`}
-                      className="place-tile-notes-tooltip"
-                      role="tooltip"
-                    >
-                      <span className="place-tile-notes-tooltip-label">
-                        Public notes
-                      </span>
-                      <p className="place-tile-notes-tooltip-text mb-0">
-                        {notesTooltipFirstLine}
-                      </p>
-                    </div>
-                  ) : null}
-                </article>
-              );
-            })}
-          </div>
+                </div>
+                <button
+                  type="button"
+                  className="place-tiles-carousel-btn place-tiles-carousel-btn--next"
+                  aria-label="Next slide"
+                  disabled={tileSlideIndex >= maxTileSlide}
+                  onClick={() =>
+                    setTileCarouselIndex((i) =>
+                      Math.min(maxTileSlide, i + 1)
+                    )
+                  }
+                >
+                  <i className="fas fa-chevron-right" aria-hidden />
+                </button>
+              </div>
+            </div>
+            <div
+              className="place-tiles-pagination place-tiles-pagination--tiles"
+              role="navigation"
+              aria-label="Tiles list pagination"
+            >
+              <div className="place-tiles-pagination-left">
+                {tileChunks.length > 1 ? (
+                  <span className="place-tiles-carousel-slide-hint text-muted small">
+                    Slide {tileSlideIndex + 1} of {tileChunks.length}
+                  </span>
+                ) : null}
+              </div>
+              <div
+                className="place-tiles-pagination-size"
+                role="group"
+                aria-label="Tiles per slide"
+              >
+                <span className="place-tiles-sort-label">Per slide</span>
+                {[
+                  { id: "6", label: "6" },
+                  { id: "12", label: "12" },
+                  { id: "48", label: "48" },
+                ].map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    className={`place-tiles-sort-btn${tileVisibleOption === opt.id ? " is-active" : ""}`}
+                    onClick={() => setTileVisibleOption(opt.id)}
+                    aria-pressed={tileVisibleOption === opt.id}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
         )}
       </div>
       <ExportPlacesCsvModal

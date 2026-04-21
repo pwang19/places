@@ -1042,6 +1042,121 @@ body {
   gap: 1.25rem;
 }
 
+.place-tiles-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.place-tiles-pagination-left {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.place-tiles-pagination-size {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  flex: 0 0 auto;
+  margin-left: auto;
+  justify-content: flex-end;
+}
+
+.place-tiles-page-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.place-tiles-page-btn {
+  padding: 0.25rem 0.5rem;
+  line-height: 1;
+}
+
+.place-tiles-page-indicator {
+  white-space: nowrap;
+}
+
+.place-tiles-carousel-wrap {
+  margin-top: 0.25rem;
+}
+
+.place-tiles-carousel {
+  display: flex;
+  align-items: stretch;
+  gap: 0.35rem;
+  outline: none;
+}
+
+.place-tiles-carousel:focus-visible {
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--primary);
+  border-radius: 12px;
+}
+
+.place-tiles-carousel-btn {
+  flex: 0 0 auto;
+  align-self: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.place-tiles-carousel-btn:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.place-tiles-carousel-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.place-tiles-carousel-viewport {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.place-tiles-carousel-track {
+  display: flex;
+  transition: transform 0.3s ease;
+}
+
+.place-tiles-carousel-slide {
+  flex: 0 0 100%;
+  box-sizing: border-box;
+  padding: 0 0.15rem;
+}
+
+.place-tiles-carousel-slide-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1.25rem;
+}
+
 .place-tiles-empty {
   grid-column: 1 / -1;
   text-align: center;
