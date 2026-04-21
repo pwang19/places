@@ -45,8 +45,7 @@ export default function PlaceContactFields({
     <>
       <div className="mb-3">
         <label htmlFor={`${idPrefix}-phone`} className="form-label">
-          Phone{" "}
-          <span className="text-muted fw-normal">(optional)</span>
+          Phone
         </label>
         <input
           id={`${idPrefix}-phone`}
@@ -59,10 +58,7 @@ export default function PlaceContactFields({
         />
       </div>
       <div className="mb-3">
-        <label className="form-label d-block">
-          Email addresses{" "}
-          <span className="text-muted fw-normal">(optional)</span>
-        </label>
+        <label className="form-label d-block">Email addresses</label>
         {emailRows.map((val, i) => (
           <div key={`e-${i}`} className="input-group mb-2">
             <input
@@ -97,10 +93,7 @@ export default function PlaceContactFields({
         </button>
       </div>
       <div className="mb-3">
-        <label className="form-label d-block">
-          Websites{" "}
-          <span className="text-muted fw-normal">(optional)</span>
-        </label>
+        <label className="form-label d-block">Websites</label>
         {websiteRows.map((val, i) => (
           <div key={`w-${i}`} className="input-group mb-2">
             <input

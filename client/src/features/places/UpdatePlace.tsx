@@ -314,7 +314,7 @@ const UpdatePlace = ({
         }}
       >
         <div 
-          className="modal-dialog modal-dialog-centered" 
+          className="modal-dialog modal-lg modal-dialog-centered" 
           role="document"
           onClick={(e) => e.stopPropagation()}
         >
@@ -333,237 +333,258 @@ const UpdatePlace = ({
             </div>
             <form onSubmit={handleSubmit}>
               <div className="modal-body">
-                <div className="mb-3">
-                  <label htmlFor="updatePlaceName" className="form-label">
-                    Place Name
-                  </label>
-                  <input
-                    id="updatePlaceName"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    type="text"
-                    className="form-control"
-                    placeholder="Enter place name"
-                    required
-                  />
-                </div>
-                <div className="mb-3">
-                  <label htmlFor="updatePlaceLocation" className="form-label">
-                    Location
-                  </label>
-                  <LocationAutocomplete
-                    id="updatePlaceLocation"
-                    value={location}
-                    onChange={setLocation}
-                    placeholder="Enter location"
-                    required
-                  />
-                </div>
-                <PlaceContactFields
-                  idPrefix="update-place"
-                  phone={phone}
-                  onPhoneChange={setPhone}
-                  emails={emails}
-                  onEmailsChange={setEmails}
-                  websites={websites}
-                  onWebsitesChange={setWebsites}
-                />
-                <div className="mb-3">
-                  <label htmlFor="updatePriceRange" className="form-label">
-                    Price range
-                  </label>
-                  <select
-                    id="updatePriceRange"
-                    value={priceRange}
-                    onChange={(e) => setPriceRange(e.target.value)}
-                    className="form-select"
-                  >
-                    <option value="">Not applicable</option>
-                    <option value="1">$</option>
-                    <option value="2">$$</option>
-                    <option value="3">$$$</option>
-                    <option value="4">$$$$</option>
-                    <option value="5">$$$$$</option>
-                  </select>
-                </div>
-                <div className="mb-3">
-                  <label htmlFor="updatePlaceNotes" className="form-label">
-                    Public notes <span className="text-muted fw-normal">(optional)</span>
-                  </label>
-                  <textarea
-                    id="updatePlaceNotes"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    className="form-control"
-                    rows={3}
-                    placeholder="Parking tips, hours, favorites…"
-                  />
-                </div>
-                <div className="mb-3 form-check">
-                  <input
-                    id="updatePlaceReviewsDisabled"
-                    type="checkbox"
-                    className="form-check-input"
-                    checked={reviewsDisabled}
-                    onChange={(e) => setReviewsDisabled(e.target.checked)}
-                  />
-                  <label
-                    className="form-check-label"
-                    htmlFor="updatePlaceReviewsDisabled"
-                  >
-                    Reviews disabled
-                  </label>
-                </div>
-                <div className="mb-3">
-                  <label
-                    htmlFor="update-place-related-add"
-                    className="form-label d-block"
-                  >
-                    Related places
-                  </label>
-                  {relatedPlaces.length > 0 ? (
-                    <div className="d-flex flex-wrap gap-2 mb-2">
-                      {relatedPlaces.map((rp) => (
-                        <span
-                          key={String(rp.id)}
-                          className="badge rounded-pill d-inline-flex align-items-center gap-2"
-                          style={{
-                            background: "rgba(24, 144, 255, 0.12)",
-                            color: "var(--text-heading)",
-                            border: "1px solid var(--border-color)",
-                            fontSize: "0.85rem",
-                            padding: "0.4em 0.65em",
-                          }}
-                        >
-                          {rp.name}
-                          {isAdmin ? (
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-link p-0 m-0"
+                <div className="row g-3 g-lg-4 place-form-two-col">
+                  <div className="col-12 col-lg-6">
+                    <div className="mb-3">
+                      <label htmlFor="updatePlaceName" className="form-label">
+                        Place Name{" "}
+                        <span className="text-danger" aria-hidden="true">
+                          *
+                        </span>
+                      </label>
+                      <input
+                        id="updatePlaceName"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        type="text"
+                        className="form-control"
+                        placeholder="Enter place name"
+                        required
+                      />
+                    </div>
+                    <div className="mb-3">
+                      <label
+                        htmlFor="updatePlaceLocation"
+                        className="form-label"
+                      >
+                        Location{" "}
+                        <span className="text-danger" aria-hidden="true">
+                          *
+                        </span>
+                      </label>
+                      <LocationAutocomplete
+                        id="updatePlaceLocation"
+                        value={location}
+                        onChange={setLocation}
+                        placeholder="Enter location"
+                        required
+                      />
+                    </div>
+                    <div className="mb-3">
+                      <label htmlFor="updatePlaceNotes" className="form-label">
+                        Public notes
+                      </label>
+                      <textarea
+                        id="updatePlaceNotes"
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        className="form-control"
+                        rows={3}
+                        placeholder="Parking tips, hours, favorites…"
+                      />
+                    </div>
+                    <div className="mb-1">
+                      <label className="form-label d-block">Tags</label>
+                      {tagList.length > 0 ? (
+                        <div className="d-flex flex-wrap gap-2 mb-2">
+                          {tagList.map((t) => (
+                            <span
+                              key={t.id}
+                              className="badge rounded-pill d-inline-flex align-items-center gap-2"
                               style={{
-                                lineHeight: 1,
-                                textDecoration: "none",
-                                color: "var(--text-muted)",
-                              }}
-                              title="Remove link"
-                              aria-label={`Unlink ${rp.name}`}
-                              disabled={linkActionBusy}
-                              onClick={async () => {
-                                setLinkActionBusy(true);
-                                setLinkError("");
-                                try {
-                                  await PlaceFinder.delete(
-                                    `/${placeId}/links/${rp.id}`
-                                  );
-                                  await pullPlaceFromServer();
-                                } catch (err: unknown) {
-                                  const er = err as {
-                                    response?: { data?: { message?: string } };
-                                  };
-                                  const msg =
-                                    er?.response?.data?.message ||
-                                    (err instanceof Error
-                                      ? err.message
-                                      : null) ||
-                                    "Could not remove link.";
-                                  setLinkError(String(msg));
-                                } finally {
-                                  setLinkActionBusy(false);
-                                }
+                                background: "rgba(24, 144, 255, 0.12)",
+                                color: "var(--text-heading)",
+                                border: "1px solid var(--border-color)",
+                                fontSize: "0.85rem",
+                                padding: "0.4em 0.65em",
                               }}
                             >
-                              ×
-                            </button>
-                          ) : null}
-                        </span>
-                      ))}
+                              {t.name}
+                              {isAdmin ? (
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-link p-0 m-0"
+                                  style={{
+                                    lineHeight: 1,
+                                    textDecoration: "none",
+                                    color: "var(--text-muted)",
+                                  }}
+                                  title="Remove tag"
+                                  aria-label={`Remove tag ${t.name}`}
+                                  onClick={async () => {
+                                    try {
+                                      await PlaceFinder.delete(
+                                        `/${placeId}/tags/${t.id}`
+                                      );
+                                      await syncPlaceAfterTagChange();
+                                    } catch (e) {
+                                      console.error(e);
+                                    }
+                                  }}
+                                >
+                                  ×
+                                </button>
+                              ) : null}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-muted small mb-2">No tags yet.</p>
+                      )}
+                      <TagInput
+                        id="update-place-tag-input"
+                        placeholder="Add a tag (type, suggestion, then Enter)"
+                        showHint={true}
+                        onSubmitName={async (raw) => {
+                          await PlaceFinder.post(`/${placeId}/tags`, {
+                            name: raw,
+                          });
+                          await syncPlaceAfterTagChange();
+                        }}
+                      />
                     </div>
-                  ) : (
-                    <p className="text-muted small mb-2">No related places yet.</p>
-                  )}
-                  <select
-                    id="update-place-related-add"
-                    className="form-select"
-                    value={linkAddValue}
-                    onChange={(e) => {
-                      void handleAddRelated(e);
-                    }}
-                    disabled={linkActionBusy || linkPickOptions.length === 0}
-                  >
-                    <option value="">
-                      {linkPickOptions.length === 0
-                        ? "No more places to link"
-                        : "Link another place…"}
-                    </option>
-                    {linkPickOptions.map((p) => (
-                      <option key={String(p.id)} value={String(p.id)}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                  {linkError ? (
-                    <p className="text-danger small mt-1 mb-0">{linkError}</p>
-                  ) : null}
-                </div>
-                <div className="mb-1">
-                  <label className="form-label d-block">Tags</label>
-                  {tagList.length > 0 ? (
-                    <div className="d-flex flex-wrap gap-2 mb-2">
-                      {tagList.map((t) => (
-                        <span
-                          key={t.id}
-                          className="badge rounded-pill d-inline-flex align-items-center gap-2"
-                          style={{
-                            background: "rgba(24, 144, 255, 0.12)",
-                            color: "var(--text-heading)",
-                            border: "1px solid var(--border-color)",
-                            fontSize: "0.85rem",
-                            padding: "0.4em 0.65em",
-                          }}
-                        >
-                          {t.name}
-                          {isAdmin ? (
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-link p-0 m-0"
+                  </div>
+                  <div className="col-12 col-lg-6">
+                    <div className="mb-3">
+                      <label htmlFor="updatePriceRange" className="form-label">
+                        Price range
+                      </label>
+                      <select
+                        id="updatePriceRange"
+                        value={priceRange}
+                        onChange={(e) => setPriceRange(e.target.value)}
+                        className="form-select"
+                      >
+                        <option value="">Not applicable</option>
+                        <option value="1">$</option>
+                        <option value="2">$$</option>
+                        <option value="3">$$$</option>
+                        <option value="4">$$$$</option>
+                        <option value="5">$$$$$</option>
+                      </select>
+                    </div>
+                    <PlaceContactFields
+                      idPrefix="update-place"
+                      phone={phone}
+                      onPhoneChange={setPhone}
+                      emails={emails}
+                      onEmailsChange={setEmails}
+                      websites={websites}
+                      onWebsitesChange={setWebsites}
+                    />
+                    <div className="mb-3 form-check">
+                      <input
+                        id="updatePlaceReviewsDisabled"
+                        type="checkbox"
+                        className="form-check-input"
+                        checked={reviewsDisabled}
+                        onChange={(e) => setReviewsDisabled(e.target.checked)}
+                      />
+                      <label
+                        className="form-check-label"
+                        htmlFor="updatePlaceReviewsDisabled"
+                      >
+                        Reviews disabled
+                      </label>
+                    </div>
+                    <div className="mb-3">
+                      <label
+                        htmlFor="update-place-related-add"
+                        className="form-label d-block"
+                      >
+                        Related places
+                      </label>
+                      {relatedPlaces.length > 0 ? (
+                        <div className="d-flex flex-wrap gap-2 mb-2">
+                          {relatedPlaces.map((rp) => (
+                            <span
+                              key={String(rp.id)}
+                              className="badge rounded-pill d-inline-flex align-items-center gap-2"
                               style={{
-                                lineHeight: 1,
-                                textDecoration: "none",
-                                color: "var(--text-muted)",
-                              }}
-                              title="Remove tag"
-                              aria-label={`Remove tag ${t.name}`}
-                              onClick={async () => {
-                                try {
-                                  await PlaceFinder.delete(
-                                    `/${placeId}/tags/${t.id}`
-                                  );
-                                  await syncPlaceAfterTagChange();
-                                } catch (e) {
-                                  console.error(e);
-                                }
+                                background: "rgba(24, 144, 255, 0.12)",
+                                color: "var(--text-heading)",
+                                border: "1px solid var(--border-color)",
+                                fontSize: "0.85rem",
+                                padding: "0.4em 0.65em",
                               }}
                             >
-                              ×
-                            </button>
-                          ) : null}
-                        </span>
-                      ))}
+                              {rp.name}
+                              {isAdmin ? (
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-link p-0 m-0"
+                                  style={{
+                                    lineHeight: 1,
+                                    textDecoration: "none",
+                                    color: "var(--text-muted)",
+                                  }}
+                                  title="Remove link"
+                                  aria-label={`Unlink ${rp.name}`}
+                                  disabled={linkActionBusy}
+                                  onClick={async () => {
+                                    setLinkActionBusy(true);
+                                    setLinkError("");
+                                    try {
+                                      await PlaceFinder.delete(
+                                        `/${placeId}/links/${rp.id}`
+                                      );
+                                      await pullPlaceFromServer();
+                                    } catch (err: unknown) {
+                                      const er = err as {
+                                        response?: {
+                                          data?: { message?: string };
+                                        };
+                                      };
+                                      const msg =
+                                        er?.response?.data?.message ||
+                                        (err instanceof Error
+                                          ? err.message
+                                          : null) ||
+                                        "Could not remove link.";
+                                      setLinkError(String(msg));
+                                    } finally {
+                                      setLinkActionBusy(false);
+                                    }
+                                  }}
+                                >
+                                  ×
+                                </button>
+                              ) : null}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-muted small mb-2">
+                          No related places yet.
+                        </p>
+                      )}
+                      <select
+                        id="update-place-related-add"
+                        className="form-select"
+                        value={linkAddValue}
+                        onChange={(e) => {
+                          void handleAddRelated(e);
+                        }}
+                        disabled={linkActionBusy || linkPickOptions.length === 0}
+                      >
+                        <option value="">
+                          {linkPickOptions.length === 0
+                            ? "No more places to link"
+                            : "Link another place…"}
+                        </option>
+                        {linkPickOptions.map((p) => (
+                          <option key={String(p.id)} value={String(p.id)}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </select>
+                      {linkError ? (
+                        <p className="text-danger small mt-1 mb-0">
+                          {linkError}
+                        </p>
+                      ) : null}
                     </div>
-                  ) : (
-                    <p className="text-muted small mb-2">No tags yet.</p>
-                  )}
-                  <TagInput
-                    id="update-place-tag-input"
-                    placeholder="Add a tag (type, suggestion, then Enter)"
-                    showHint={true}
-                    onSubmitName={async (raw) => {
-                      await PlaceFinder.post(`/${placeId}/tags`, {
-                        name: raw,
-                      });
-                      await syncPlaceAfterTagChange();
-                    }}
-                  />
+                  </div>
                 </div>
               </div>
               <div className="modal-footer d-flex flex-wrap justify-content-between align-items-center gap-2">

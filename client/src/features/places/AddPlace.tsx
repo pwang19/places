@@ -136,7 +136,7 @@ const AddPlace = ({ showModal, onClose }) => {
         }}
       >
         <div 
-          className="modal-dialog modal-dialog-centered" 
+          className="modal-dialog modal-lg modal-dialog-centered" 
           role="document"
           onClick={(e) => e.stopPropagation()}
         >
@@ -163,145 +163,155 @@ const AddPlace = ({ showModal, onClose }) => {
                     {submitError}
                   </div>
                 ) : null}
-                <div className="mb-3">
-                  <label htmlFor="placeName" className="form-label">
-                    Place Name
-                  </label>
-                  <input
-                    id="placeName"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    type="text"
-                    className="form-control"
-                    placeholder="Enter place name"
-                    required
-                  />
-                </div>
-                <div className="mb-3">
-                  <label htmlFor="placeLocation" className="form-label">
-                    Location
-                  </label>
-                  <LocationAutocomplete
-                    id="placeLocation"
-                    value={location}
-                    onChange={setLocation}
-                    placeholder="Enter location"
-                    required
-                  />
-                </div>
-                <PlaceContactFields
-                  idPrefix="add-place"
-                  phone={phone}
-                  onPhoneChange={setPhone}
-                  emails={emails}
-                  onEmailsChange={setEmails}
-                  websites={websites}
-                  onWebsitesChange={setWebsites}
-                />
-                <div className="mb-3">
-                  <label htmlFor="priceRange" className="form-label">
-                    Price range
-                  </label>
-                  <select
-                    id="priceRange"
-                    value={priceRange}
-                    onChange={(e) => setPriceRange(e.target.value)}
-                    className="form-select"
-                  >
-                    <option value="">Not applicable</option>
-                    <option value="1">$</option>
-                    <option value="2">$$</option>
-                    <option value="3">$$$</option>
-                    <option value="4">$$$$</option>
-                    <option value="5">$$$$$</option>
-                  </select>
-                </div>
-                <div className="mb-3">
-                  <label htmlFor="placeNotes" className="form-label">
-                    Public notes <span className="text-muted fw-normal">(optional)</span>
-                  </label>
-                  <textarea
-                    id="placeNotes"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    className="form-control"
-                    rows={3}
-                    placeholder="Parking tips, hours, favorites…"
-                  />
-                </div>
-                <div className="mb-3 form-check">
-                  <input
-                    id="addPlaceReviewsDisabled"
-                    type="checkbox"
-                    className="form-check-input"
-                    checked={reviewsDisabled}
-                    onChange={(e) => setReviewsDisabled(e.target.checked)}
-                  />
-                  <label
-                    className="form-check-label"
-                    htmlFor="addPlaceReviewsDisabled"
-                  >
-                    Reviews disabled
-                  </label>
-                </div>
-                <div className="mb-3">
-                  <label className="form-label d-block">
-                    Tags <span className="text-muted fw-normal">(optional)</span>
-                  </label>
-                  {pendingTags.length > 0 ? (
-                    <div className="d-flex flex-wrap gap-2 mb-2">
-                      {pendingTags.map((tagName) => (
-                        <span
-                          key={tagName}
-                          className="badge rounded-pill d-inline-flex align-items-center gap-2"
-                          style={{
-                            background: "rgba(24, 144, 255, 0.12)",
-                            color: "var(--text-heading)",
-                            border: "1px solid var(--border-color)",
-                            fontSize: "0.85rem",
-                            padding: "0.4em 0.65em",
-                          }}
-                        >
-                          {tagName}
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-link p-0 m-0"
-                            style={{
-                              lineHeight: 1,
-                              textDecoration: "none",
-                              color: "var(--text-muted)",
-                            }}
-                            title="Remove tag"
-                            aria-label={`Remove tag ${tagName}`}
-                            onClick={() =>
-                              setPendingTags((prev) =>
-                                prev.filter((t) => t !== tagName)
-                              )
-                            }
-                          >
-                            ×
-                          </button>
+                <div className="row g-3 g-lg-4 place-form-two-col">
+                  <div className="col-12 col-lg-6">
+                    <div className="mb-3">
+                      <label htmlFor="placeName" className="form-label">
+                        Place Name{" "}
+                        <span className="text-danger" aria-hidden="true">
+                          *
                         </span>
-                      ))}
+                      </label>
+                      <input
+                        id="placeName"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        type="text"
+                        className="form-control"
+                        placeholder="Enter place name"
+                        required
+                      />
                     </div>
-                  ) : null}
-                  <TagInput
-                    id="add-place-tag-input"
-                    placeholder="Add a tag (type, suggestion, then Enter)"
-                    showHint={true}
-                    onSubmitName={(raw) => {
-                      const trimmed = raw.trim();
-                      if (!trimmed) return Promise.resolve();
-                      setPendingTags((prev) =>
-                        prev.some(
-                          (t) => t.toLowerCase() === trimmed.toLowerCase()
-                        )
-                          ? prev
-                          : [...prev, trimmed]
-                      );
-                      return Promise.resolve();
-                    }}
-                  />
+                    <div className="mb-3">
+                      <label htmlFor="placeLocation" className="form-label">
+                        Location{" "}
+                        <span className="text-danger" aria-hidden="true">
+                          *
+                        </span>
+                      </label>
+                      <LocationAutocomplete
+                        id="placeLocation"
+                        value={location}
+                        onChange={setLocation}
+                        placeholder="Enter location"
+                        required
+                      />
+                    </div>
+                    <div className="mb-3">
+                      <label htmlFor="placeNotes" className="form-label">
+                        Public notes
+                      </label>
+                      <textarea
+                        id="placeNotes"
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        className="form-control"
+                        rows={3}
+                        placeholder="Parking tips, hours, favorites…"
+                      />
+                    </div>
+                    <div className="mb-0">
+                      <label className="form-label d-block">Tags</label>
+                      {pendingTags.length > 0 ? (
+                        <div className="d-flex flex-wrap gap-2 mb-2">
+                          {pendingTags.map((tagName) => (
+                            <span
+                              key={tagName}
+                              className="badge rounded-pill d-inline-flex align-items-center gap-2"
+                              style={{
+                                background: "rgba(24, 144, 255, 0.12)",
+                                color: "var(--text-heading)",
+                                border: "1px solid var(--border-color)",
+                                fontSize: "0.85rem",
+                                padding: "0.4em 0.65em",
+                              }}
+                            >
+                              {tagName}
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-link p-0 m-0"
+                                style={{
+                                  lineHeight: 1,
+                                  textDecoration: "none",
+                                  color: "var(--text-muted)",
+                                }}
+                                title="Remove tag"
+                                aria-label={`Remove tag ${tagName}`}
+                                onClick={() =>
+                                  setPendingTags((prev) =>
+                                    prev.filter((t) => t !== tagName)
+                                  )
+                                }
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                      <TagInput
+                        id="add-place-tag-input"
+                        placeholder="Add a tag (type, suggestion, then Enter)"
+                        showHint={true}
+                        onSubmitName={(raw) => {
+                          const trimmed = raw.trim();
+                          if (!trimmed) return Promise.resolve();
+                          setPendingTags((prev) =>
+                            prev.some(
+                              (t) => t.toLowerCase() === trimmed.toLowerCase()
+                            )
+                              ? prev
+                              : [...prev, trimmed]
+                          );
+                          return Promise.resolve();
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div className="col-12 col-lg-6">
+                    <div className="mb-3">
+                      <label htmlFor="priceRange" className="form-label">
+                        Price range
+                      </label>
+                      <select
+                        id="priceRange"
+                        value={priceRange}
+                        onChange={(e) => setPriceRange(e.target.value)}
+                        className="form-select"
+                      >
+                        <option value="">Not applicable</option>
+                        <option value="1">$</option>
+                        <option value="2">$$</option>
+                        <option value="3">$$$</option>
+                        <option value="4">$$$$</option>
+                        <option value="5">$$$$$</option>
+                      </select>
+                    </div>
+                    <PlaceContactFields
+                      idPrefix="add-place"
+                      phone={phone}
+                      onPhoneChange={setPhone}
+                      emails={emails}
+                      onEmailsChange={setEmails}
+                      websites={websites}
+                      onWebsitesChange={setWebsites}
+                    />
+                    <div className="mb-0 form-check">
+                      <input
+                        id="addPlaceReviewsDisabled"
+                        type="checkbox"
+                        className="form-check-input"
+                        checked={reviewsDisabled}
+                        onChange={(e) => setReviewsDisabled(e.target.checked)}
+                      />
+                      <label
+                        className="form-check-label"
+                        htmlFor="addPlaceReviewsDisabled"
+                      >
+                        Reviews disabled
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
               <div className="modal-footer">

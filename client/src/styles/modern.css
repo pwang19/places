@@ -390,6 +390,12 @@ body {
   background: var(--surface-muted);
 }
 
+@media (min-width: 992px) {
+  .modern-modal .place-form-two-col > .col-lg-6:last-child {
+    border-left: 1px solid var(--border-color);
+  }
+}
+
 /* Place tiles (home list) */
 .place-tiles-toolbar {
   display: flex;
