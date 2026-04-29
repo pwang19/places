@@ -29,6 +29,9 @@ export type PlacesContextValue = {
   /** PlaceList registers how to reload the main list (current filters). */
   registerPlacesReload: (fn: (() => void) | null) => void;
   reloadPlaces: () => void;
+  /** Admin: restrict home list to places with flag reports (API filter). */
+  showFlaggedOnly: boolean;
+  setShowFlaggedOnly: Dispatch<SetStateAction<boolean>>;
 };
 
 export const PlacesContext = createContext<PlacesContextValue | undefined>(
@@ -46,6 +49,7 @@ export function usePlacesContext(): PlacesContextValue {
 export function PlacesContextProvider({ children }: { children: ReactNode }) {
   const [places, setPlaces] = useState<PlaceListEntry[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<SelectedPlaceDetail>(null);
+  const [showFlaggedOnly, setShowFlaggedOnly] = useState(false);
   const placesReloadRef = useRef<(() => void) | null>(null);
 
   const addPlaces = (place: PlaceListEntry) => {
@@ -70,6 +74,8 @@ export function PlacesContextProvider({ children }: { children: ReactNode }) {
         setSelectedPlace,
         registerPlacesReload,
         reloadPlaces,
+        showFlaggedOnly,
+        setShowFlaggedOnly,
       }}
     >
       {children}

@@ -398,6 +398,8 @@ body {
 
 /* Place tiles (home list) */
 .place-tiles-toolbar {
+  position: relative;
+  z-index: 8;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -467,10 +469,6 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
-.place-tiles-table-wrap.place-tiles-table-wrap--menu-open {
-  overflow: visible;
-}
-
 .place-tiles-table.modern-table {
   table-layout: fixed;
   width: 100%;
@@ -478,6 +476,67 @@ body {
 
 .place-tiles-table.modern-table thead th {
   position: relative;
+}
+
+/* Tight vertical padding on place list table (overrides .modern-table thead th) */
+.place-tiles-table.modern-table thead tr:first-child th {
+  padding: 0.7rem 1rem 0.3rem 1rem;
+}
+
+.place-tiles-table.modern-table thead tr.place-tiles-th-filter-row th {
+  padding: 0.2rem 1rem 0.4rem 1rem;
+}
+
+.place-tiles-th-filter-row th {
+  position: relative;
+  z-index: 0;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  background: var(--surface);
+  color: var(--text-primary);
+  border-top: 1px solid var(--border-color);
+  vertical-align: top;
+  box-shadow: none;
+  transform: none;
+}
+
+.place-tiles-table.modern-table .place-tiles-th-filter-row th:hover {
+  background: var(--surface-hover);
+  transform: none;
+}
+
+.place-tiles-th-filter-row th.place-tiles-th-filter--name-span {
+  min-width: 0;
+}
+
+.place-tiles-col-filter-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.9;
+}
+
+.place-tiles-col-filter-input {
+  min-width: 0;
+  width: 100%;
+}
+
+.place-tiles-col-filter-select {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+.place-tiles-col-filter-tags {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.place-tiles-filter-input-wrap--table-head {
+  min-width: 0;
+}
+
+.place-tiles-filters-pills--table-head {
+  margin-top: 0.3rem;
 }
 
 .place-tiles-col-resizer {
@@ -519,11 +578,6 @@ body {
   min-width: 0;
 }
 
-/* Open column menu must stack above sibling th cells (later columns paint on top by default) */
-.place-tiles-table.modern-table thead th.place-tiles-th-menu-open {
-  z-index: 100;
-}
-
 .place-tiles-col-sort-btn {
   display: inline-flex;
   align-items: center;
@@ -562,75 +616,6 @@ body {
 .place-tiles-col-head-cell {
   position: relative;
   min-width: 0;
-}
-
-.place-tiles-col-menu-panel {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  z-index: 70;
-  min-width: 14rem;
-  max-width: min(22rem, 100%);
-  background: var(--surface);
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  box-shadow: var(--shadow-xl);
-  padding: 0.35rem 0;
-  /* Popover is inside thead th (light text on blue); reset for surface panel */
-  color: var(--text-primary);
-  text-transform: none;
-  font-size: 0.875rem;
-  font-weight: 400;
-  letter-spacing: normal;
-}
-
-.place-tiles-col-menu-panel .form-label,
-.place-tiles-col-menu-panel label {
-  color: var(--text-heading);
-  text-transform: none;
-}
-
-.place-tiles-col-menu-panel .text-muted {
-  color: var(--text-muted);
-}
-
-.place-tiles-col-menu-panel .form-control {
-  color: var(--text-primary);
-}
-
-.place-tiles-col-menu-item {
-  display: block;
-  width: 100%;
-  text-align: left;
-  border: none;
-  background: transparent;
-  padding: 0.45rem 0.85rem;
-  font-size: 0.9rem;
-  color: var(--text-heading);
-  cursor: pointer;
-}
-
-.place-tiles-col-menu-item:hover {
-  background: var(--surface-hover);
-}
-
-.place-tiles-col-menu-divider {
-  height: 1px;
-  background: var(--surface-muted);
-  margin: 0.35rem 0;
-}
-
-.place-tiles-col-menu-filter {
-  padding: 0 0.65rem 0.35rem;
-}
-
-.place-tiles-col-filter-field .place-tiles-col-filter-clear {
-  margin-top: 0.5rem;
-  font-size: 0.8rem;
-}
-
-.place-tiles-col-filter-price-row label {
-  cursor: pointer;
 }
 
 .place-tiles-td-drag {
@@ -749,16 +734,16 @@ body {
 
 .place-tiles-filters-panel {
   position: absolute;
-  z-index: 40;
+  z-index: 50;
   top: calc(100% + 0.35rem);
   left: 0;
-  width: min(32rem, 100%);
-  max-width: 100%;
+  width: min(36rem, calc(100vw - 2rem));
+  max-width: calc(100vw - 2rem);
   background: var(--surface);
   border: 1px solid var(--border-color);
   border-radius: 14px;
   box-shadow: var(--shadow-xl);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .place-tiles-filters-panel-body {
@@ -766,6 +751,29 @@ body {
   grid-template-columns: 1fr;
   gap: 1.25rem;
   padding: 1.1rem 1.15rem;
+}
+
+.place-tiles-filters-intro {
+  grid-column: 1 / -1;
+  padding: 0.65rem 0.75rem;
+  background: var(--surface-muted);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+}
+
+.place-tiles-filters-intro-lead {
+  line-height: 1.45;
+}
+
+.place-tiles-filters-intro-line {
+  line-height: 1.45;
+}
+
+.place-tiles-filters-intro-kicker {
+  font-weight: 600;
+  color: var(--text-body);
+  margin-right: 0.15rem;
+  white-space: nowrap;
 }
 
 @media (min-width: 640px) {

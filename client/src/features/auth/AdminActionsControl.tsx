@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
+import { usePlacesContext } from "../../context/PlacesContext";
 import { parseAllowedEmailDomains } from "../../utils/allowedEmailDomains";
 import EditAdminsModal from "./EditAdminsModal";
 import ManageTagsModal from "./ManageTagsModal";
 
 export default function AdminActionsControl() {
   const { isAdmin, refreshIsAdmin } = useAuth();
+  const { showFlaggedOnly, setShowFlaggedOnly } = usePlacesContext();
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAdminsModal, setShowAdminsModal] = useState(false);
   const [showTagsModal, setShowTagsModal] = useState(false);
@@ -90,6 +92,19 @@ export default function AdminActionsControl() {
                 <i className="fas fa-tags me-2 text-muted" aria-hidden />
                 Manage Tags
               </button>
+            </li>
+            <li role="separator" className="dropdown-divider" />
+            <li role="none">
+              <label className="dropdown-item d-flex align-items-center gap-2 mb-0 text-wrap">
+                <input
+                  className="form-check-input flex-shrink-0 mt-0"
+                  type="checkbox"
+                  checked={showFlaggedOnly}
+                  onChange={(e) => setShowFlaggedOnly(e.target.checked)}
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <span>Show flagged places only</span>
+              </label>
             </li>
           </ul>
         ) : null}

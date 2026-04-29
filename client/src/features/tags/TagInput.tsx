@@ -13,6 +13,7 @@ const TagInput = ({
   onSubmitName,
   disabled = false,
   className = "",
+  inputClassName = "form-control",
   showHint = true,
   ariaLabelledby = undefined,
   ariaDescribedby = undefined,
@@ -114,7 +115,7 @@ const TagInput = ({
         id={id}
         type="text"
         role="combobox"
-        className="form-control"
+        className={inputClassName}
         autoComplete="off"
         placeholder={placeholder}
         value={value}
